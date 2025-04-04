@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <Extern href="stdidcmd.h"/>
+  <Extern href="vsshlids.h"/>
+  <Commands package="guidShinePackage">
+    <Groups>
+      <Group guid="guidShinePackageCmdSet" id="MyMenuGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS"/>
+      </Group>
+    </Groups>
+    <Buttons>
+      <Button guid="guidShinePackageCmdSet" id="ShowAiChatCommand" priority="0x0100" type="Button">
+        <Parent guid="guidShinePackageCmdSet" id="MyMenuGroup" />
+        <Strings>
+          <ButtonText>Shine(Code Assistant Tool)</ButtonText>
+        </Strings>
+      </Button>
+    </Buttons>
+  </Commands>
+  <Symbols>
+    <GuidSymbol name="guidShinePackage" value="{B1234567-89AB-CDEF-0123-456789ABCDEF}" />
+    <GuidSymbol name="guidShinePackageCmdSet" value="{D1234567-89AB-CDEF-0123-456789ABCDEF}">
+      <IDSymbol name="MyMenuGroup" value="0x1020" />
+      <IDSymbol name="ShowAiChatCommand" value="0x0100" />
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>

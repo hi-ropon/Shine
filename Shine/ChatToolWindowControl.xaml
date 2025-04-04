@@ -1,0 +1,122 @@
+﻿<UserControl x:Class="Shine.ChatToolWindowControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400">
+    <Grid>
+        <Grid.RowDefinitions>
+            <!-- チャット履歴表示 -->
+            <RowDefinition Height="*" />
+            <!-- ローディング用プログレスバー -->
+            <RowDefinition Height="Auto" />
+            <!-- 入力リッチテキストボックス -->
+            <RowDefinition Height="Auto" />
+            <!-- チェックボックス -->
+            <RowDefinition Height="Auto" />
+            <!-- ボタン類 -->
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- チャット履歴表示部分 -->
+        <wv2:WebView2 x:Name="ChatHistoryWebView" Grid.Row="0" Margin="5"/>
+
+        <!-- ローディングアイコンとしてのプログレスバー -->
+        <ProgressBar x:Name="LoadingProgressBar"
+                     Grid.Row="1"
+                     Height="20"
+                     Margin="5"
+                     IsIndeterminate="True"
+                     Visibility="Collapsed"/>
+
+        <!-- 入力リッチテキストボックス -->
+        <Grid Grid.Row="2">
+            <RichTextBox x:Name="InputRichTextBox"
+             Margin="5"
+             Height="80"
+             TextChanged="InputRichTextBox_TextChanged"
+             KeyDown="InputRichTextBox_KeyDown">
+                <RichTextBox.Resources>
+                    <!-- Paragraph の既定スタイルを上書き -->
+                    <Style TargetType="Paragraph">
+                        <!-- 段落の上下マージンを小さくする -->
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
+                    </Style>
+                </RichTextBox.Resources>
+            </RichTextBox>
+
+            <!-- 候補を表示するポップアップ -->
+            <Popup x:Name="MentionPopup"
+                   Placement="Top"
+                   PlacementTarget="{Binding ElementName=InputRichTextBox}"
+                   AllowsTransparency="True"
+                   StaysOpen="False"
+                   HorizontalOffset="0"
+                   VerticalOffset="0">
+                <Border Background="White" BorderBrush="Gray" BorderThickness="1" Padding="5">
+                    <ListBox x:Name="MentionListBox"
+                             Width="250"
+                             MaxHeight="300"
+                             PreviewKeyDown="MentionListBox_PreviewKeyDown"
+                             MouseDoubleClick="MentionListBox_MouseDoubleClick" />
+                </Border>
+            </Popup>
+        </Grid>
+
+        <!-- チェックボックス：エディタで開いている全てのプログラムを含む -->
+        <Grid Grid.Row="3" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <CheckBox x:Name="IncludeOpenFilesCheckBox"
+                      Content="エディタで開いている全てのプログラムを含む"
+                      VerticalAlignment="Center" />
+        </Grid>
+
+        <!-- ボタン類 -->
+        <Grid Grid.Row="4" Margin="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 有効化ボタン -->
+            <Button x:Name="EnableButton"
+                    Content="有効化"
+                    Margin="5"
+                    Width="50"
+                    Height="30"
+                    Click="EnableButton_Click"
+                    Grid.Column="0" />
+
+            <!-- プルダウンメニュー（ComboBox） -->
+            <ComboBox x:Name="ModelComboBox"
+                      Margin="5"
+                      Width="95"
+                      Height="25"
+                      Grid.Column="1"
+                      SelectionChanged="ModelComboBox_SelectionChanged" />
+
+            <!-- クリア / 送信ボタン -->
+            <StackPanel Grid.Column="2"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <Button x:Name="ClearButton"
+                        Content="クリア"
+                        Margin="5"
+                        Width="50"
+                        Height="30"
+                        Click="ClearButton_Click" />
+                <Button x:Name="SendButton"
+                        Content="送信"
+                        Margin="5"
+                        Width="50"
+                        Height="30"
+                        Click="SendButton_Click" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>
