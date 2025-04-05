@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.Shell;
 using System;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Drawing.Design;
 
 namespace Shine
@@ -68,6 +69,19 @@ namespace Shine
         [Description("Azure OpenAI でのデプロイメント名を入力します。")]
         [Editor(typeof(ModelNameEditor), typeof(UITypeEditor))]
         public string AzureDeploymentName { get; set; } = "your-deployment-name";
+
+        private int _chatHistoryCount = 5;
+
+        [Category("チャット履歴")]
+        [DisplayName("履歴数")]
+        [Description("チャット履歴に保持するメッセージ数（0～10）。0の場合、履歴は保持しません。")]
+        [DefaultValue(5)]
+        [Range(0, 10)]
+        public int ChatHistoryCount
+        {
+            get { return _chatHistoryCount; }
+            set { _chatHistoryCount = Math.Max(0, Math.Min(10, value)); }
+        }
 
         protected override void OnApply(PageApplyEventArgs e)
         {

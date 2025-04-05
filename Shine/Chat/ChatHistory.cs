@@ -3,6 +3,8 @@ using System.Windows.Media;
 using System.Threading.Tasks;
 using Microsoft.Web.WebView2.Wpf;
 using Microsoft.VisualStudio.PlatformUI;
+using LangChain.Memory;
+using System.Text;
 
 namespace Shine
 {
@@ -15,6 +17,7 @@ namespace Shine
         private ChatHistoryDocument _document;
         private Brush _foregroundBrush;
         private readonly string _assistantIconBase64;
+        private ConversationBufferMemory _conversationMemory;
 
         public ChatHistory(WebView2 chatHistoryWebView, Brush foregroundBrush)
         {
@@ -24,6 +27,7 @@ namespace Shine
             _assistantIconBase64 = ResourceHelper.LoadResourceAsBase64("Shine.Resources.icon.png", typeof(ChatHistory));
             _document = new ChatHistoryDocument(_foregroundBrush, _assistantIconBase64);
 
+            _conversationMemory = new ConversationBufferMemory();
             // 初期状態の HTML を WebView2 に読み込む
             _chatHistoryWebView.NavigateToString(_document.GetHtml());
         }
@@ -33,9 +37,21 @@ namespace Shine
         /// </summary>
         public void AddChatMessage(string senderName, string message)
         {
+            if (senderName.Equals("User", StringComparison.OrdinalIgnoreCase))
+            {
+                _conversationMemory.ChatHistory.AddUserMessage(message);
+            }
+            else if (senderName.Equals("Assistant", StringComparison.OrdinalIgnoreCase))
+            {
+                _conversationMemory.ChatHistory.AddAiMessage(message);
+            }
+            else
+            {
+                _conversationMemory.ChatHistory.AddAiMessage(message);
+            }
+
             // ChatMessageFormatter を利用してメッセージの HTML スニペットを生成
             string messageBlock = ChatMessageFormatter.FormatMessage(senderName, message, _document.Pipeline, _assistantIconBase64);
-
             _document.AppendChatMessage(messageBlock);
 
             // スクリプトを挿入してコピー機能やスクロールを実行
@@ -46,12 +62,49 @@ namespace Shine
         }
 
         /// <summary>
-        /// チャット履歴をクリアする
+        /// チャット履歴（および会話メモリ）をクリアする
         /// </summary>
         public void ClearHistory()
         {
+            _conversationMemory.Clear();
+
+            // HTML 表示用のドキュメントも初期化
             _document.Initialize();
             _chatHistoryWebView.NavigateToString(_document.GetHtml());
+        }
+
+        /// <summary>
+        /// 履歴の上限数を設定する（オプションからの値を反映）
+        /// </summary>
+        public void SetHistoryLimit(int limit)
+        {
+            _document.MaxChatHistoryCount = limit;
+        }
+
+        // 会話履歴を整形して返すメソッド
+        public string GetConversationHistory()
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (var msg in _conversationMemory.ChatHistory.Messages)
+            {
+
+                sb.AppendLine($"{msg.GetType().Name}: {msg.ToString()}");
+                //// HumanMessage / AIMessage など、各メッセージ型に応じたフォーマットを適用
+                //if (msg is HumanChatMessage human)
+                //{
+                //    sb.AppendLine("User: " + human.Content);
+                //}
+                //else if (msg is AIMessage ai)
+                //{
+                //    sb.AppendLine("Assistant: " + ai.Content);
+                //}
+                //else
+                //{
+                //    // その他の型の場合は、型名と内容を出力
+                //    sb.AppendLine($"{msg.GetType().Name}: {msg.ToString()}");
+                //}
+            }
+            return sb.ToString();
         }
 
         /// <summary>

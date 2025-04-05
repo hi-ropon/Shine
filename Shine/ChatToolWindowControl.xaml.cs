@@ -55,6 +55,9 @@ namespace Shine
             if (_chatHistoryManager == null)
             {
                 _chatHistoryManager = new ChatHistory(ChatHistoryWebView, _themeManager.ForegroundBrush);
+
+                var options = (AiAssistantOptions)ShinePackage.Instance.GetDialogPage(typeof(AiAssistantOptions));
+                _chatHistoryManager.SetHistoryLimit(options.ChatHistoryCount * 2);
             }
         }
 
@@ -152,7 +155,12 @@ namespace Shine
             try
             {
                 processedInput = await Task.Run(() => ProcessUserInputForFileContent(userInput));
-                reply = await _chatClientService.GetChatResponseAsync(processedInput);
+
+                // 会話履歴を取得して、現在の入力に結合する
+                string conversationHistory = _chatHistoryManager.GetConversationHistory();
+                string fullPrompt = conversationHistory + "\n" + processedInput;
+
+                reply = await _chatClientService.GetChatResponseAsync(fullPrompt);
             }
             catch (Exception ex)
             {
