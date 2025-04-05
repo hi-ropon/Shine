@@ -20,13 +20,13 @@ namespace Shine
                 return ThreadHelper.JoinableTaskFactory.Run(async () =>
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    
+
                     return GetFileContent(fileName);
                 });
             }
 
             DTE2 dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
-            
+
             if (dte?.Solution == null) return null;
 
             string filePath = FindFileInProject(dte.Solution, fileName);
@@ -39,23 +39,23 @@ namespace Shine
                 }
                 catch (IOException ioEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"IO Error reading file '{filePath}': {ioEx.Message}");
+                    System.Diagnostics.Debug.WriteLine($"ファイル '{filePath}' の読み込み中にIOエラーが発生しました: {ioEx.Message}");
                     return null;
                 }
                 catch (UnauthorizedAccessException uaEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Access Error reading file '{filePath}': {uaEx.Message}");
+                    System.Diagnostics.Debug.WriteLine($"ファイル '{filePath}' の読み込み中にアクセスエラーが発生しました: {uaEx.Message}");
                     return null;
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Unexpected Error reading file '{filePath}': {ex}");
+                    System.Diagnostics.Debug.WriteLine($"ファイル '{filePath}' の読み込み中に予期しないエラーが発生しました: {ex}");
                     return null;
                 }
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"File not found for '{fileName}'. Searched path: '{filePath}'");
+                System.Diagnostics.Debug.WriteLine($"ファイル '{fileName}' が見つかりません。検索したパス: '{filePath}'");
                 return null;
             }
         }
@@ -70,7 +70,7 @@ namespace Shine
                 foreach (Project project in solution.Projects)
                 {
                     string path = FindFileInProjectItems(project?.ProjectItems, fileName);
-                    
+
                     if (!string.IsNullOrEmpty(path))
                     {
                         return path;
@@ -79,11 +79,11 @@ namespace Shine
             }
             catch (COMException comEx)
             {
-                System.Diagnostics.Debug.WriteLine($"COM error iterating projects in FindFileInProject: {comEx.Message}");
+                System.Diagnostics.Debug.WriteLine($"FindFileInProjectでプロジェクトを反復処理中にCOMエラーが発生しました: {comEx.Message}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error iterating projects in FindFileInProject: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"FindFileInProjectでプロジェクトを反復処理中にエラーが発生しました: {ex.Message}");
             }
             return null;
         }
@@ -98,7 +98,7 @@ namespace Shine
                 foreach (ProjectItem item in items)
                 {
                     string path = GetFilePathFromProjectItemRecursive(item, fileName);
-                    
+
                     if (!string.IsNullOrEmpty(path))
                     {
                         return path;
@@ -107,11 +107,11 @@ namespace Shine
             }
             catch (COMException comEx)
             {
-                System.Diagnostics.Debug.WriteLine($"COM error iterating ProjectItems: {comEx.Message}");
+                System.Diagnostics.Debug.WriteLine($"ProjectItemsの反復処理中にCOMエラーが発生しました: {comEx.Message}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error iterating ProjectItems: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"ProjectItemsの反復処理中にエラーが発生しました: {ex.Message}");
             }
             return null;
         }
@@ -125,36 +125,36 @@ namespace Shine
             {
                 short fileCount = 0;
                 try { fileCount = item.FileCount; } catch { }
-                
+
                 if (fileCount > 0 && string.Equals(item.Name, fileName, StringComparison.OrdinalIgnoreCase))
                 {
                     try
                     {
                         string filePath = item.FileNames[1];
-                        
+
                         if (Path.IsPathRooted(filePath))
                         {
                             return filePath;
                         }
                         else
                         {
-                            System.Diagnostics.Debug.WriteLine($"Warning: Found relative path '{filePath}' for item '{item.Name}'.");
+                            System.Diagnostics.Debug.WriteLine($"警告: アイテム '{item.Name}' に相対パス '{filePath}' が見つかりました。");
                             return filePath;
                         }
                     }
                     catch (ArgumentOutOfRangeException)
                     {
-                        System.Diagnostics.Debug.WriteLine($"FileNames[1] not available for item '{item.Name}'.");
+                        System.Diagnostics.Debug.WriteLine($"アイテム '{item.Name}' のFileNames[1]が利用できません。");
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Error getting FileNames for item '{item.Name}': {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"アイテム '{item.Name}' のFileNames取得中にエラーが発生しました: {ex.Message}");
                         return null;
                     }
                 }
 
                 string pathInSubItems = FindFileInProjectItems(item.ProjectItems, fileName);
-                
+
                 if (!string.IsNullOrEmpty(pathInSubItems))
                 {
                     return pathInSubItems;
@@ -171,11 +171,11 @@ namespace Shine
             }
             catch (COMException comEx)
             {
-                System.Diagnostics.Debug.WriteLine($"COM error processing ProjectItem '{item?.Name}': {comEx.Message}");
+                System.Diagnostics.Debug.WriteLine($"ProjectItem '{item?.Name}' の処理中にCOMエラーが発生しました: {comEx.Message}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error processing ProjectItem '{item?.Name}': {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"ProjectItem '{item?.Name}' の処理中にエラーが発生しました: {ex.Message}");
             }
             return null;
         }

@@ -19,10 +19,10 @@ namespace Shine
             ThreadHelper.ThrowIfNotOnUIThread();
             var codeFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             DTE2 dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
-            
+
             if (dte?.Solution?.Projects == null)
             {
-                System.Diagnostics.Debug.WriteLine("DTE or Solution or Projects is null. Cannot get code files.");
+                System.Diagnostics.Debug.WriteLine("DTE または ソリューションまたはプロジェクトが null です。コードファイルを取得できません。");
                 return new List<string>();
             }
 
@@ -34,11 +34,11 @@ namespace Shine
                 }
                 catch (COMException comEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"COM Error processing project '{proj?.Name}': {comEx.Message}");
+                    System.Diagnostics.Debug.WriteLine($"プロジェクト '{proj?.Name}' の処理中に COM エラーが発生しました: {comEx.Message}");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error processing project '{proj?.Name}': {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"プロジェクト '{proj?.Name}' の処理中にエラーが発生しました: {ex.Message}");
                 }
             }
 
@@ -49,23 +49,23 @@ namespace Shine
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var result = new List<string>();
-            
+
             if (project == null) return result;
 
             ProjectItems items = null;
-            
+
             try
             {
                 items = project.ProjectItems;
             }
             catch (COMException comEx)
             {
-                System.Diagnostics.Debug.WriteLine($"COM Error getting ProjectItems from project '{project.Name}': {comEx.Message}");
+                System.Diagnostics.Debug.WriteLine($"プロジェクト '{project.Name}' の ProjectItems 取得中に COM エラーが発生しました: {comEx.Message}");
                 return result;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error getting ProjectItems from project '{project.Name}': {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"プロジェクト '{project.Name}' の ProjectItems 取得中にエラーが発生しました: {ex.Message}");
                 return result;
             }
 
@@ -79,11 +79,11 @@ namespace Shine
                 }
                 catch (COMException comEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"COM Error processing ProjectItem '{item?.Name}' in project '{project.Name}': {comEx.Message}");
+                    System.Diagnostics.Debug.WriteLine($"プロジェクト '{project.Name}' 内の ProjectItem '{item?.Name}' の処理中に COM エラーが発生しました: {comEx.Message}");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error processing ProjectItem '{item?.Name}' in project '{project.Name}': {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"プロジェクト '{project.Name}' 内の ProjectItem '{item?.Name}' の処理中にエラーが発生しました: {ex.Message}");
                 }
             }
 
@@ -94,16 +94,16 @@ namespace Shine
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var result = new List<string>();
-            
+
             if (item == null) return result;
 
             string itemName = null;
             ProjectItems subItems = null;
-            
+
             try
             {
                 itemName = item.Name;
-                
+
                 if (IsCodeFile(itemName))
                 {
                     result.Add(itemName);
@@ -112,12 +112,12 @@ namespace Shine
             }
             catch (COMException comEx)
             {
-                System.Diagnostics.Debug.WriteLine($"COM Error accessing ProjectItem properties for '{itemName ?? "unknown"}': {comEx.Message}");
+                System.Diagnostics.Debug.WriteLine($"ProjectItem プロパティ（'{itemName ?? "unknown"}'）へのアクセス中に COM エラーが発生しました: {comEx.Message}");
                 return result;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error accessing ProjectItem properties for '{itemName ?? "unknown"}': {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"ProjectItem プロパティ（'{itemName ?? "unknown"}'）へのアクセス中にエラーが発生しました: {ex.Message}");
                 return result;
             }
 
@@ -131,11 +131,11 @@ namespace Shine
                     }
                     catch (COMException comEx)
                     {
-                        System.Diagnostics.Debug.WriteLine($"COM Error processing sub ProjectItem '{subItem?.Name}': {comEx.Message}");
+                        System.Diagnostics.Debug.WriteLine($"サブ ProjectItem '{subItem?.Name}' の処理中に COM エラーが発生しました: {comEx.Message}");
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Error processing sub ProjectItem '{subItem?.Name}': {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"サブ ProjectItem '{subItem?.Name}' の処理中にエラーが発生しました: {ex.Message}");
                     }
                 }
             }
@@ -146,11 +146,17 @@ namespace Shine
         public static bool IsCodeFile(string fileName)
         {
             if (string.IsNullOrEmpty(fileName)) return false;
-            
+
             try
             {
                 string extension = Path.GetExtension(fileName)?.ToLowerInvariant();
-                return extension == ".cs" || extension == ".vb" || extension == ".cpp" || extension == ".h";
+                return extension == ".cs" ||
+                       extension == ".vb" ||
+                       extension == ".cpp" ||
+                       extension == ".h" ||
+                       extension == ".csv" ||
+                       extension == ".xml" ||
+                       extension == ".json";
             }
             catch (ArgumentException)
             {
