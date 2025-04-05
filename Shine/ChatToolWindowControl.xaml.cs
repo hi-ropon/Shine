@@ -158,7 +158,7 @@ namespace Shine
             {
                 errorOccurred = true;
                 reply = $"エラーが発生しました:\n{ex.Message}";
-                System.Diagnostics.Debug.WriteLine($"Error during AI request or processing: {ex}");
+                System.Diagnostics.Debug.WriteLine($"AI リクエストまたは処理中にエラーが発生しました: {ex}");
             }
             finally
             {
@@ -202,7 +202,7 @@ namespace Shine
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error getting IncludeOpenFilesCheckBox state: {ex}");
+                System.Diagnostics.Debug.WriteLine($"IncludeOpenFilesCheckBox の状態取得中にエラーが発生しました: {ex}");
             }
 
             if (includeOpenFiles)
@@ -218,7 +218,7 @@ namespace Shine
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error getting open documents content: {ex}");
+                    System.Diagnostics.Debug.WriteLine($"オープンドキュメントの内容取得中にエラーが発生しました: {ex}");
                 }
 
                 if (!string.IsNullOrEmpty(openFilesContent))
@@ -242,7 +242,7 @@ namespace Shine
             {
                 if (dte?.Documents == null)
                 {
-                    System.Diagnostics.Debug.WriteLine("DTE or Documents collection is null in GetOpenDocumentsContent.");
+                    System.Diagnostics.Debug.WriteLine("GetOpenDocumentsContent で DTE または Documents コレクションが null です。");
                     return "";
                 }
 
@@ -262,7 +262,7 @@ namespace Shine
                         catch (Exception ex)
                         {
                             sb.AppendLine($"--- {fileName} (読み込みエラー) ---");
-                            System.Diagnostics.Debug.WriteLine($"Error reading open document '{doc.FullName}': {ex}");
+                            System.Diagnostics.Debug.WriteLine($"オープンドキュメント '{doc.FullName}' の読み込み中にエラーが発生しました: {ex}");
                         }
                     }
                     else
@@ -273,7 +273,7 @@ namespace Shine
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error in GetOpenDocumentsContent: {ex}");
+                System.Diagnostics.Debug.WriteLine($"GetOpenDocumentsContent 内でエラーが発生しました: {ex}");
             }
 
             return sb.ToString();
