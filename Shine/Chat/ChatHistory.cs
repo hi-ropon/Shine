@@ -1,10 +1,11 @@
 ﻿using System;
+using System.IO;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Media;
 using Microsoft.Web.WebView2.Wpf;
 using Markdig;
-using System.Net;
-using System.Windows.Media;
 using Markdig.SyntaxHighlighting;
 using Microsoft.VisualStudio.PlatformUI;
 
@@ -19,13 +20,42 @@ namespace Shine
         private readonly StringBuilder _htmlContent;
         private Brush _foregroundBrush;
         private MarkdownPipeline _pipeline;
+        private readonly string _assistantIconBase64;
 
         public ChatHistory(WebView2 chatHistoryWebView, Brush foregroundBrush)
         {
             _chatHistoryWebView = chatHistoryWebView ?? throw new ArgumentNullException(nameof(chatHistoryWebView));
             _foregroundBrush = foregroundBrush ?? throw new ArgumentNullException(nameof(foregroundBrush));
             _htmlContent = new StringBuilder();
+
+            _assistantIconBase64 = LoadIconAsBase64("Shine.Resources.icon.png");
+
             InitializeHtml();
+        }
+
+        /// <summary>
+        /// icon.png をリソースから読み込み、Base64 文字列に変換して返す
+        /// </summary>
+        private string LoadIconAsBase64(string resourcePath)
+        {
+            try
+            {
+                var assembly = typeof(ChatHistory).Assembly;
+
+                using (Stream stream = assembly.GetManifestResourceStream(resourcePath))
+                {
+                    if (stream == null) return null;
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        stream.CopyTo(ms);
+                        return Convert.ToBase64String(ms.ToArray());
+                    }
+                }
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         /// <summary>
@@ -66,17 +96,13 @@ namespace Shine
             _htmlContent.AppendLine(".sender { font-weight: bold; margin-bottom: 5px; }");
             _htmlContent.AppendLine("pre { padding: 10px; border-radius: 4px; overflow: auto; }");
 
-            // コピーボタン　スタイル
+            // コピーボタン スタイル
             _htmlContent.AppendLine(".copy-button { position: absolute; top: 5px; right: 5px; padding: 2px 6px; font-size: 12px; cursor: pointer; }");
             _htmlContent.AppendLine("</style>");
 
-            // コピーボタン　スクリプト
             _htmlContent.AppendLine("<script>");
             _htmlContent.AppendLine("function copyToClipboard(text, button, event) {");
-            _htmlContent.AppendLine("  if (event) {");
-            _htmlContent.AppendLine("    event.preventDefault();");
-            _htmlContent.AppendLine("    event.stopPropagation();");
-            _htmlContent.AppendLine("  }");
+            _htmlContent.AppendLine("  if (event) { event.preventDefault(); event.stopPropagation(); }");
             _htmlContent.AppendLine("  if (navigator.clipboard && navigator.clipboard.writeText) {");
             _htmlContent.AppendLine("    navigator.clipboard.writeText(text).then(function() {");
             _htmlContent.AppendLine("      button.textContent = 'Copied!';");
@@ -88,7 +114,7 @@ namespace Shine
             _htmlContent.AppendLine("  } else {");
             _htmlContent.AppendLine("    fallbackCopyTextToClipboard(text, button);");
             _htmlContent.AppendLine("  }");
-            _htmlContent.AppendLine("  return false;"); // イベントのデフォルト動作をキャンセル
+            _htmlContent.AppendLine("  return false;");
             _htmlContent.AppendLine("}");
             _htmlContent.AppendLine("");
             _htmlContent.AppendLine("function fallbackCopyTextToClipboard(text, button) {");
@@ -164,10 +190,18 @@ namespace Shine
                 cssClass = "error";
             }
 
-            string messageBlock = $"<div class='message {cssClass}'>" +
-                                  $"<div class='sender'>{WebUtility.HtmlEncode(senderName)}</div>" +
-                                  $"{htmlMessage}" +
-                                  $"</div>";
+            string iconTag = "";
+            if (cssClass == "assistant" && !string.IsNullOrEmpty(_assistantIconBase64))
+            {
+                iconTag = $"<img src=\"data:image/png;base64,{_assistantIconBase64}\" " +
+                          $"alt=\"icon\" style=\"width:32px;height:32px;margin-right:5px;vertical-align:middle;\" />";
+            }
+
+            string messageBlock =
+                $"<div class='message {cssClass}'>" +
+                $"<div class='sender'>{iconTag}{WebUtility.HtmlEncode(senderName)}</div>" +
+                $"{htmlMessage}" +
+                $"</div>";
 
             int bodyCloseIndex = _htmlContent.ToString().LastIndexOf("</body>");
             if (bodyCloseIndex >= 0)
@@ -227,12 +261,10 @@ namespace Shine
         /// </summary>
         public async System.Threading.Tasks.Task UpdateBackgroundColorAsync()
         {
-            // VS の背景色を取得して16進数文字列に変換
             var bgDrawingColor = VSColorTheme.GetThemedColor(EnvironmentColors.ToolWindowBackgroundColorKey);
             var themedBgColor = Color.FromArgb(bgDrawingColor.A, bgDrawingColor.R, bgDrawingColor.G, bgDrawingColor.B);
             string backgroundHex = $"#{themedBgColor.R:X2}{themedBgColor.G:X2}{themedBgColor.B:X2}";
 
-            // document.body の backgroundColor を更新するスクリプトを実行
             string script = $"document.body.style.backgroundColor = '{backgroundHex}';";
             await _chatHistoryWebView.ExecuteScriptAsync(script);
         }
