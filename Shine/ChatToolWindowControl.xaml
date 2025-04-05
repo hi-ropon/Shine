@@ -13,7 +13,7 @@
             <RowDefinition Height="Auto" />
             <!-- 入力リッチテキストボックス -->
             <RowDefinition Height="Auto" />
-            <!-- チェックボックス -->
+            <!-- チェックボックスとテキスト -->
             <RowDefinition Height="Auto" />
             <!-- ボタン類 -->
             <RowDefinition Height="Auto" />
@@ -33,14 +33,13 @@
         <!-- 入力リッチテキストボックス -->
         <Grid Grid.Row="2">
             <RichTextBox x:Name="InputRichTextBox"
-             Margin="5"
-             Height="80"
-             TextChanged="InputRichTextBox_TextChanged"
-             KeyDown="InputRichTextBox_KeyDown">
+                         Margin="5"
+                         Height="80"
+                         TextChanged="InputRichTextBox_TextChanged"
+                         KeyDown="InputRichTextBox_KeyDown">
                 <RichTextBox.Resources>
                     <!-- Paragraph の既定スタイルを上書き -->
                     <Style TargetType="Paragraph">
-                        <!-- 段落の上下マージンを小さくする -->
                         <Setter Property="Margin" Value="0" />
                         <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
                     </Style>
@@ -65,14 +64,24 @@
             </Popup>
         </Grid>
 
-        <!-- チェックボックス：エディタで開いている全てのプログラムを含む -->
+        <!-- チェックボックスと補足テキスト -->
         <Grid Grid.Row="3" Margin="5">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
             <CheckBox x:Name="IncludeOpenFilesCheckBox"
                       Content="エディタで開いている全てのプログラムを含む"
                       VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1"
+                       Text="AIの提案は不正確である可能性があります"
+                       FontSize="12"
+                       Margin="5,2,0,0"/>
+            <TextBlock Grid.Row="1"
+                       Text="AIの提案は不正確である可能性があります"
+                       FontSize="12"
+                       Margin="5,2,0,0"
+                       Foreground="{Binding Foreground, ElementName=IncludeOpenFilesCheckBox}"/>
         </Grid>
 
         <!-- ボタン類 -->
