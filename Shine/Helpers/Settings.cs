@@ -107,6 +107,7 @@ namespace Shine
                 _modelComboBox.Items.Add("gpt-4o-mini");
                 _modelComboBox.Items.Add("gpt-4o");
                 _modelComboBox.Items.Add("o1-mini");
+                _modelComboBox.Items.Add("o3-mini");
             }
             else
             {

@@ -12,6 +12,7 @@ namespace Shine
         private readonly string _model;
         private readonly float _temperature;
         private readonly string _apiEndpoint; // 4つ目の引数を保持（未使用の場合もある）
+        private readonly string _reasoningEffort;
 
         /// <summary>
         /// コンストラクター（3パラメータ版）
@@ -21,6 +22,7 @@ namespace Shine
             _client = new ChatClient(model, apiKey);
             _model = model;
             _temperature = temperature;
+            _reasoningEffort = "high";
         }
 
         /// <summary>
@@ -31,6 +33,10 @@ namespace Shine
             if (_model == "o1-mini")
             {
                 return await GetO1ChatReplyAsync(userMessage);
+            }
+            else if (_model == "o3-mini")
+            {
+                return await GetO3ChatReplyAsync(userMessage);
             }
             else
             {
@@ -108,7 +114,7 @@ namespace Shine
         }
 
         /// <summary>
-        /// 推論モデルのチャット API を利用して、ユーザーのメッセージに対する AI の応答を取得します。
+        /// o1モデルのチャット API を利用して、ユーザーのメッセージに対する AI の応答を取得します。
         /// </summary>
         public async Task<string> GetO1ChatReplyAsync(string userMessage, string conversationHistory = "")
         {
@@ -116,6 +122,36 @@ namespace Shine
 {{
     ""model"": ""{_model}"",
     ""temperature"": 1.0,
+    ""messages"": [
+        {{
+            ""role"": ""user"",
+            ""content"": ""{EscapeJson(userMessage)}""
+        }}
+    ]
+}}";
+            BinaryData input = BinaryData.FromString(json);
+            using var content = BinaryContent.Create(input);
+            ClientResult result = await _client.CompleteChatAsync(content);
+            BinaryData output = result.GetRawResponse().Content;
+            using var doc = JsonDocument.Parse(output.ToString());
+            string message = doc.RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString();
+            return message;
+        }
+
+        /// <summary>
+        /// o3モデルのチャット API を利用して、ユーザーのメッセージに対する AI の応答を取得します。
+        /// </summary>
+        public async Task<string> GetO3ChatReplyAsync(string userMessage, string conversationHistory = "")
+        {
+            string json = $@"
+{{
+    ""model"": ""{_model}"",
+    ""temperature"": 1.0,
+    ""reasoning_effort"": ""{_reasoningEffort}"",
     ""messages"": [
         {{
             ""role"": ""user"",
