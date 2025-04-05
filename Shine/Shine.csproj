@@ -51,6 +51,9 @@
     <Compile Include="AiAssistantOptions.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Helpers\BrushHelper.cs" />
+    <Compile Include="Chat\ChatHistoryDocument.cs" />
+    <Compile Include="Chat\ChatMessageFormatter.cs" />
     <Compile Include="ChatToolWindow.cs" />
     <Compile Include="ChatToolWindowControl.xaml.cs">
       <DependentUpon>ChatToolWindowControl.xaml</DependentUpon>
@@ -63,6 +66,7 @@
     <Compile Include="Helpers\Theme.cs" />
     <Compile Include="ModelNameEditor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Helpers\ResourceHelper.cs" />
     <Compile Include="Services\AzureOpenAiClientService.cs" />
     <Compile Include="Services\IChatClientService.cs" />
     <Compile Include="Services\OpenAiClientService.cs" />
