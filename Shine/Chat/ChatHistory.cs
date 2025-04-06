@@ -163,6 +163,7 @@ namespace Shine
             StringBuilder sb = new StringBuilder();
             foreach (var msg in _conversationMemory.ChatHistory.Messages)
             {
+                // TODO: 何回目の履歴かを情報に加える
                 sb.AppendLine($"{msg.GetType().Name}: {msg.ToString()}");
             }
             return sb.ToString();

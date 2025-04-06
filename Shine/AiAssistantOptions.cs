@@ -70,7 +70,7 @@ namespace Shine
         [Editor(typeof(ModelNameEditor), typeof(UITypeEditor))]
         public string AzureDeploymentName { get; set; } = "your-deployment-name";
 
-        private int _chatHistoryCount = 5;
+        private int _chatHistoryCount = 3;
 
         [Category("チャット履歴")]
         [DisplayName("履歴数")]
