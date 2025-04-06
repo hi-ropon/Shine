@@ -5,8 +5,7 @@ using Microsoft.Web.WebView2.Wpf;
 using Microsoft.VisualStudio.PlatformUI;
 using LangChain.Memory;
 using System.Text;
-using LangChain.Schema;
-using LangChain.Providers;
+using System.Linq;
 
 namespace Shine
 {
@@ -20,6 +19,7 @@ namespace Shine
         private Brush _foregroundBrush;
         private readonly string _assistantIconBase64;
         private ConversationBufferMemory _conversationMemory;
+        private int _historyLimit = 5;
 
         public ChatHistory(WebView2 chatHistoryWebView, Brush foregroundBrush)
         {
@@ -39,6 +39,22 @@ namespace Shine
         /// </summary>
         public void AddChatMessage(string senderName, string message)
         {
+            // ChatMessageFormatter を利用してメッセージの HTML スニペットを生成
+            string messageBlock = ChatMessageFormatter.FormatMessage(senderName, message, _document.Pipeline, _assistantIconBase64);
+            _document.AppendChatMessage(messageBlock);
+
+            // スクリプトを挿入してコピー機能やスクロールを実行
+            string script = "<script>addCopyButtons(); scrollToBottom();</script>";
+            _document.AppendScript(script);
+
+            _chatHistoryWebView.NavigateToString(_document.GetHtml());
+        }
+
+        /// <summary>
+        /// チャット履歴を追加する
+        /// </summary>
+        public void AddConversationMemory(string senderName, string message)
+        {
             if (senderName.Equals("User", StringComparison.OrdinalIgnoreCase))
             {
                 _conversationMemory.ChatHistory.AddUserMessage(message);
@@ -51,16 +67,67 @@ namespace Shine
             {
                 _conversationMemory.ChatHistory.AddAiMessage(message);
             }
+        }
 
-            // ChatMessageFormatter を利用してメッセージの HTML スニペットを生成
-            string messageBlock = ChatMessageFormatter.FormatMessage(senderName, message, _document.Pipeline, _assistantIconBase64);
-            _document.AppendChatMessage(messageBlock);
+        /// <summary>
+        /// チャット履歴の量を調整する
+        /// </summary>
+        public void AdjustConversationMemory()
+        {
+            if (_historyLimit == 0)
+            {
+                _conversationMemory.Clear();
+                return;
+            }
 
-            // スクリプトを挿入してコピー機能やスクロールを実行
-            string script = "<script>addCopyButtons(); scrollToBottom();</script>";
-            _document.AppendScript(script);
+            var messages = _conversationMemory.ChatHistory.Messages.ToList();
 
-            _chatHistoryWebView.NavigateToString(_document.GetHtml());
+            int humanMessageCount = messages.Count(m => (m.Role).ToString() == "Human");
+
+            if (humanMessageCount > _historyLimit)
+            {
+                int excessPairs = humanMessageCount - _historyLimit;
+                int messagesToSkip = 0;
+                int humanCount = 0;
+
+                for (int i = 0; i < messages.Count; i++)
+                {
+                    if ((messages[i].Role).ToString() == "Human")
+                    {
+                        humanCount++;
+                        if (humanCount <= excessPairs)
+                        {
+                            messagesToSkip = i + 2; // Human + AI で2メッセージ
+                            if (i + 1 >= messages.Count || (messages[i + 1].Role).ToString() != "Ai")
+                            {
+                                // AIメッセージがない場合は1つだけスキップ
+                                messagesToSkip = i + 1;
+                            }
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                var newMemory = new ConversationBufferMemory();
+
+                // 残すメッセージを新しいメモリに追加
+                for (int i = messagesToSkip; i < messages.Count; i++)
+                {
+                    if ((messages[i].Role).ToString() == "Human")
+                    {
+                        newMemory.ChatHistory.AddUserMessage(messages[i].Content);
+                    }
+                    else if ((messages[i].Role).ToString() == "Ai")
+                    {
+                        newMemory.ChatHistory.AddAiMessage(messages[i].Content);
+                    }
+                }
+
+                _conversationMemory = newMemory;
+            }
         }
 
         /// <summary>
@@ -81,13 +148,18 @@ namespace Shine
         public void SetHistoryLimit(int limit)
         {
             _document.MaxChatHistoryCount = limit;
+
+            // Human-AI ペアの数なので、オプションの ChatHistoryCount に設定
+            _historyLimit = limit / 2;
+            AdjustConversationMemory();
         }
 
-        // 会話履歴を整形して返すメソッド
+        /// <summary>
+        /// 会話履歴を整形して返すメソッド
+        /// </summary>
+        /// <returns></returns>
         public string GetConversationHistory()
         {
-            // TODO:　会話履歴の設定値を取得して、整形する
-
             StringBuilder sb = new StringBuilder();
             foreach (var msg in _conversationMemory.ChatHistory.Messages)
             {

@@ -173,6 +173,11 @@ namespace Shine
                 // ローディング表示解除
                 LoadingProgressBar.Visibility = Visibility.Collapsed;
                 _chatHistoryManager.AddChatMessage(errorOccurred ? "Error" : "Assistant", reply);
+
+                // ユーザーの入力を会話メモリに追加
+                _chatHistoryManager.AddConversationMemory("User", userInput);
+                _chatHistoryManager.AddConversationMemory(errorOccurred ? "Error" : "Assistant", reply);
+                _chatHistoryManager.AdjustConversationMemory();
             }
         }
 
