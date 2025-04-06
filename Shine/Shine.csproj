@@ -111,6 +111,9 @@
     <PackageReference Include="Microsoft.Web.WebView2">
       <Version>1.0.3124.44</Version>
     </PackageReference>
+    <PackageReference Include="SharpToken">
+      <Version>2.0.3</Version>
+    </PackageReference>
     <PackageReference Include="System.ComponentModel.Composition">
       <Version>9.0.3</Version>
     </PackageReference>

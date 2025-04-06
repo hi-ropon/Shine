@@ -10,6 +10,7 @@ using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.PlatformUI;
+using SharpToken;
 
 namespace Shine
 {
@@ -21,6 +22,7 @@ namespace Shine
         private FileContentProvider _fileContentProvider;
         private Settings _settingsManager;
         private Mention _mentionManager;
+        private readonly GptEncoding _tokenEncoding;
 
         public ChatToolWindowControl()
         {
@@ -38,6 +40,8 @@ namespace Shine
             VSColorTheme.ThemeChanged += OnThemeChanged;
             this.Unloaded += ChatToolWindowControl_Unloaded;
             this.Loaded += ChatToolWindowControl_Loaded;
+
+            _tokenEncoding = GptEncoding.GetEncoding("cl100k_base");
         }
 
         private async void ChatToolWindowControl_Loaded(object sender, RoutedEventArgs e)
@@ -81,6 +85,16 @@ namespace Shine
             _mentionManager.OnInputTextChanged(sender, e);
         }
 
+        /// <summary>
+        /// 入力されたトークン数を計算して、TokenCountTextBox に表示します。
+        /// </summary>
+        private void UpdateTokenCount(string token)
+        {
+            // fullPrompt のトークン数をカウント（SharpToken を利用）
+            int tokenCount = _tokenEncoding.CountTokens(token);
+            TokenCountTextBox.Text = tokenCount.ToString();
+        }
+
         private void MentionListBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             _mentionManager.OnMentionListPreviewKeyDown(sender, e);
@@ -97,6 +111,14 @@ namespace Shine
             if (IncludeOpenFilesCheckBox != null)
             {
                 IncludeOpenFilesCheckBox.Foreground = _themeManager.ForegroundBrush;
+            }
+            if (TokenCountLabel != null)
+            {
+                TokenCountLabel.Foreground = _themeManager.ForegroundBrush;
+            }
+            if (TokenCountTextBox != null)
+            {
+                TokenCountTextBox.Foreground = _themeManager.ForegroundBrush;
             }
         }
 
@@ -159,6 +181,7 @@ namespace Shine
                 // 会話履歴を取得して、現在の入力に結合する
                 string conversationHistory = _chatHistoryManager.GetConversationHistory();
                 string fullPrompt = conversationHistory + "\n" + processedInput;
+                UpdateTokenCount(fullPrompt);
 
                 reply = await _chatClientService.GetChatResponseAsync(fullPrompt);
             }
