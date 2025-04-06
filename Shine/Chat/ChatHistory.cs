@@ -5,6 +5,8 @@ using Microsoft.Web.WebView2.Wpf;
 using Microsoft.VisualStudio.PlatformUI;
 using LangChain.Memory;
 using System.Text;
+using LangChain.Schema;
+using LangChain.Providers;
 
 namespace Shine
 {
@@ -84,25 +86,12 @@ namespace Shine
         // 会話履歴を整形して返すメソッド
         public string GetConversationHistory()
         {
+            // TODO:　会話履歴の設定値を取得して、整形する
+
             StringBuilder sb = new StringBuilder();
             foreach (var msg in _conversationMemory.ChatHistory.Messages)
             {
-
                 sb.AppendLine($"{msg.GetType().Name}: {msg.ToString()}");
-                //// HumanMessage / AIMessage など、各メッセージ型に応じたフォーマットを適用
-                //if (msg is HumanChatMessage human)
-                //{
-                //    sb.AppendLine("User: " + human.Content);
-                //}
-                //else if (msg is AIMessage ai)
-                //{
-                //    sb.AppendLine("Assistant: " + ai.Content);
-                //}
-                //else
-                //{
-                //    // その他の型の場合は、型名と内容を出力
-                //    sb.AppendLine($"{msg.GetType().Name}: {msg.ToString()}");
-                //}
             }
             return sb.ToString();
         }
