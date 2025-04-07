@@ -68,7 +68,7 @@ namespace Shine
             }
 
             if (_isProcessingKeyDown) return;
-            
+
             try
             {
                 _isProcessingKeyDown = true;
@@ -92,7 +92,7 @@ namespace Shine
             TextPointer caretPosition = _inputRichTextBox.CaretPosition;
             int caretOffset = GetTextOffset(_inputRichTextBox.Document.ContentStart, caretPosition);
             string fullText = new TextRange(_inputRichTextBox.Document.ContentStart, _inputRichTextBox.Document.ContentEnd).Text;
-            
+
             if (caretOffset > fullText.Length) caretOffset = fullText.Length;
 
             string textUpToCaret = fullText.Substring(0, caretOffset);
@@ -114,15 +114,15 @@ namespace Shine
                 _mentionDebounceTimer = new Timer(async _ =>
                 {
                     if (token.IsCancellationRequested) return;
-                    
+
                     try
                     {
                         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(token);
-                       
+
                         if (token.IsCancellationRequested) return;
 
                         bool shouldScanSolution = string.IsNullOrEmpty(query) || _codeFileList == null;
-                        
+
                         if (shouldScanSolution)
                         {
                             System.Diagnostics.Debug.WriteLine("Scanning solution for files...");
@@ -261,25 +261,18 @@ namespace Shine
             if (string.IsNullOrEmpty(fileName)) return;
 
             _isUpdatingText = true;
-            
+
             try
             {
                 // 現在のキャレット位置を取得
                 TextPointer caretPos = _inputRichTextBox.CaretPosition;
-                int caretOffset = GetTextOffset(_inputRichTextBox.Document.ContentStart, caretPos);
-                string fullText = new TextRange(_inputRichTextBox.Document.ContentStart, _inputRichTextBox.Document.ContentEnd).Text;
+                // 直近の「@」の位置を逆方向に走査して特定
+                TextPointer mentionStart = FindLastAtSymbol(caretPos);
 
-                // キャレット前のテキストから直近の「@」の位置を特定
-                int atIndex = fullText.LastIndexOf('@', caretOffset - 1);
-                
-                if (atIndex >= 0)
+                if (mentionStart != null)
                 {
-                    // 「@」の位置に対応する TextPointer を取得
-                    TextPointer mentionStart = GetTextPointerAtOffset(_inputRichTextBox.Document.ContentStart, atIndex);
-                    TextPointer currentCaret = _inputRichTextBox.CaretPosition;
-
                     // 「@」からキャレット位置までのテキストを削除
-                    TextRange rangeToReplace = new TextRange(mentionStart, currentCaret);
+                    TextRange rangeToReplace = new TextRange(mentionStart, caretPos);
                     rangeToReplace.Text = string.Empty;
 
                     // アイコン表示用の UI 要素（Border 内にテキスト表示の例）
@@ -307,6 +300,30 @@ namespace Shine
         }
 
         /// <summary>
+        /// キャレット位置から逆方向に走査し、直近の「@」がある位置の TextPointer を返します。
+        /// </summary>
+        /// <param name="caret">現在のキャレット位置</param>
+        /// <returns>「@」の位置を示す TextPointer。見つからなければ null を返す。</returns>
+        private TextPointer FindLastAtSymbol(TextPointer caret)
+        {
+            TextPointer pointer = caret;
+            while (pointer != null)
+            {
+                TextPointer prev = pointer.GetNextInsertionPosition(LogicalDirection.Backward);
+                if (prev == null)
+                    break;
+                var textRange = new TextRange(prev, pointer);
+                if (textRange.Text.Contains("@"))
+                {
+                    int index = textRange.Text.LastIndexOf("@");
+                    return prev.GetPositionAtOffset(index);
+                }
+                pointer = prev;
+            }
+            return null;
+        }
+
+        /// <summary>
         /// テキストレンジの開始位置から指定されたポインターまでの文字数を返します。
         /// </summary>
         /// <param name="start">テキストレンジの開始位置</param>
@@ -315,42 +332,6 @@ namespace Shine
         private int GetTextOffset(TextPointer start, TextPointer pointer)
         {
             return new TextRange(start, pointer).Text.Length;
-        }
-
-        /// <summary>
-        /// 指定されたオフセットに対応する TextPointer を返します。
-        /// </summary>
-        /// <param name="start">テキストレンジの開始位置</param>
-        /// <param name="offset">文字数のオフセット</param>
-        /// <returns>対応する TextPointer</returns>
-        private TextPointer GetTextPointerAtOffset(TextPointer start, int offset)
-        {
-            TextPointer current = start;
-            int remaining = offset;
-           
-            while (current != null && remaining > 0)
-            {
-                if (current.GetPointerContext(LogicalDirection.Forward) == TextPointerContext.Text)
-                {
-                    string textRun = current.GetTextInRun(LogicalDirection.Forward);
-                    
-                    if (textRun.Length >= remaining)
-                    {
-                        return current.GetPositionAtOffset(remaining);
-                    }
-                    else
-                    {
-                        remaining -= textRun.Length;
-                        current = current.GetPositionAtOffset(textRun.Length);
-                    }
-                }
-                else
-                {
-                    current = current.GetNextContextPosition(LogicalDirection.Forward);
-                }
-            }
-
-            return current;
         }
 
         /// <summary>
