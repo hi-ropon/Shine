@@ -27,6 +27,7 @@ namespace Shine
         public ChatToolWindowControl()
         {
             InitializeComponent();
+            DataObject.AddPastingHandler(InputRichTextBox, OnPaste);
 
             _themeManager = new Theme();
             _fileContentProvider = new FileContentProvider();
@@ -42,6 +43,21 @@ namespace Shine
             this.Loaded += ChatToolWindowControl_Loaded;
 
             _tokenizer = TiktokenTokenizer.CreateForModel("gpt-4o");
+        }
+
+        private void OnPaste(object sender, DataObjectPastingEventArgs e)
+        {
+            if (e.SourceDataObject.GetDataPresent(DataFormats.UnicodeText, true))
+            {
+                string text = e.SourceDataObject.GetData(DataFormats.UnicodeText) as string;
+                if (!string.IsNullOrEmpty(text))
+                {
+                    // 標準のペースト処理をキャンセルし、プレーンテキストを挿入
+                    e.CancelCommand();
+                    e.Handled = true;
+                    InputRichTextBox.CaretPosition.InsertTextInRun(text);
+                }
+            }
         }
 
         private async void ChatToolWindowControl_Loaded(object sender, RoutedEventArgs e)
