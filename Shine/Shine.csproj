@@ -101,6 +101,12 @@
     <PackageReference Include="Markdig.SyntaxHighlighting">
       <Version>1.1.7</Version>
     </PackageReference>
+    <PackageReference Include="Microsoft.ML.Tokenizers">
+      <Version>1.0.2</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase">
+      <Version>1.0.2</Version>
+    </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.13.40008" ExcludeAssets="runtime" NoWarn="NU1604">
       <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -110,9 +116,6 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Web.WebView2">
       <Version>1.0.3124.44</Version>
-    </PackageReference>
-    <PackageReference Include="SharpToken">
-      <Version>2.0.3</Version>
     </PackageReference>
     <PackageReference Include="System.ComponentModel.Composition">
       <Version>9.0.3</Version>

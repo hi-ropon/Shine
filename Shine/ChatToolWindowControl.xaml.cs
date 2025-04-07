@@ -10,7 +10,7 @@ using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.PlatformUI;
-using SharpToken;
+using Microsoft.ML.Tokenizers;
 
 namespace Shine
 {
@@ -22,7 +22,7 @@ namespace Shine
         private FileContentProvider _fileContentProvider;
         private Settings _settingsManager;
         private Mention _mentionManager;
-        private readonly GptEncoding _tokenEncoding;
+        private readonly Tokenizer _tokenizer;
 
         public ChatToolWindowControl()
         {
@@ -41,7 +41,7 @@ namespace Shine
             this.Unloaded += ChatToolWindowControl_Unloaded;
             this.Loaded += ChatToolWindowControl_Loaded;
 
-            _tokenEncoding = GptEncoding.GetEncoding("cl100k_base");
+            _tokenizer = TiktokenTokenizer.CreateForModel("gpt-4o");
         }
 
         private async void ChatToolWindowControl_Loaded(object sender, RoutedEventArgs e)
@@ -90,8 +90,7 @@ namespace Shine
         /// </summary>
         private void UpdateTokenCount(string token)
         {
-            // fullPrompt のトークン数をカウント（SharpToken を利用）
-            int tokenCount = _tokenEncoding.CountTokens(token);
+            int tokenCount = _tokenizer.CountTokens(token);
             TokenCountTextBox.Text = tokenCount.ToString();
         }
 
