@@ -1,6 +1,5 @@
-// ファイル名: BrushHelperTests.cs
-using System.Windows.Media;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Windows.Media;
 using Shine;
 
 namespace Shine.Tests
@@ -11,14 +10,18 @@ namespace Shine.Tests
         [TestMethod]
         public void ConvertBrushToHex_ReturnsCorrectHex_ForSolidColorBrush()
         {
-            // Arrange: 赤色 (RGB: 255, 0, 0)
-            SolidColorBrush brush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 0, 0));
-
-            // Act
+            var brush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 0, 0)); // Red
             string hex = BrushHelper.ConvertBrushToHex(brush);
+            Assert.AreEqual("#FF0000", hex);
+        }
 
-            // Assert
-            Assert.AreEqual("#FF0000", hex, "赤色の変換が正しく行われていること");
+        [TestMethod]
+        public void ConvertBrushToHex_ReturnsBlack_ForNonSolidColorBrush()
+        {
+            // SolidColorBrush 以外の場合、"#000000" が返る
+            System.Windows.Media.Brush nonSolidBrush = new DrawingBrush();
+            string hex = BrushHelper.ConvertBrushToHex(nonSolidBrush);
+            Assert.AreEqual("#000000", hex);
         }
     }
 }

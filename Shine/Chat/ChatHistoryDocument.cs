@@ -15,14 +15,14 @@ namespace Shine
         // チャットメッセージを保持するリスト
         private List<string> _chatMessages;
 
-        public MarkdownPipeline Pipeline { get; private set; }
+        public virtual MarkdownPipeline Pipeline { get; private set; }
         private readonly string _assistantIconBase64;
         private readonly Brush _foregroundBrush;
 
         /// <summary>
         /// 最大履歴数。0 の場合は履歴を保持しません。
         /// </summary>
-        public int MaxChatHistoryCount { get; set; } = 5;
+        public virtual int MaxChatHistoryCount { get; set; } = 5;
 
         public ChatHistoryDocument(Brush foregroundBrush, string assistantIconBase64)
         {
@@ -34,7 +34,7 @@ namespace Shine
         /// <summary>
         /// HTML の初期設定を行い、履歴を初期化する
         /// </summary>
-        public void Initialize()
+        public virtual void Initialize()
         {
             Pipeline = new MarkdownPipelineBuilder()
                 .UseAdvancedExtensions()
@@ -47,7 +47,7 @@ namespace Shine
         /// <summary>
         /// 履歴にチャットメッセージの HTML スニペットを追加する
         /// </summary>
-        public void AppendChatMessage(string messageBlock)
+        public virtual void AppendChatMessage(string messageBlock)
         {
             if (MaxChatHistoryCount == 0)
             {
@@ -60,7 +60,7 @@ namespace Shine
         /// <summary>
         /// 直近のメッセージにスクリプトを追加する
         /// </summary>
-        public void AppendScript(string script)
+        public virtual void AppendScript(string script)
         {
             if (_chatMessages.Count > 0)
             {
@@ -75,7 +75,7 @@ namespace Shine
         /// <summary>
         /// 現在の HTML を生成して返す
         /// </summary>
-        public string GetHtml()
+        public virtual string GetHtml()
         {
             StringBuilder sb = new StringBuilder();
 

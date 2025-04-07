@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Windows.Media;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Web.WebView2.Wpf;
+using System.Windows.Media;
 using Microsoft.VisualStudio.PlatformUI;
 using LangChain.Memory;
-using System.Text;
-using System.Linq;
 
 namespace Shine
 {
@@ -14,14 +13,15 @@ namespace Shine
     /// </summary>
     public class ChatHistory
     {
-        private readonly WebView2 _chatHistoryWebView;
+        private readonly IWebView2Wrapper _chatHistoryWebView;
         private ChatHistoryDocument _document;
         private Brush _foregroundBrush;
-        private readonly string _assistantIconBase64;
+        private string _assistantIconBase64;
         private ConversationBufferMemory _conversationMemory;
         private int _historyLimit = 5;
+        private readonly IThemeProvider _themeProvider;
 
-        public ChatHistory(WebView2 chatHistoryWebView, Brush foregroundBrush)
+        public ChatHistory(IWebView2Wrapper chatHistoryWebView, Brush foregroundBrush)
         {
             _chatHistoryWebView = chatHistoryWebView ?? throw new ArgumentNullException(nameof(chatHistoryWebView));
             _foregroundBrush = foregroundBrush ?? throw new ArgumentNullException(nameof(foregroundBrush));
@@ -34,16 +34,28 @@ namespace Shine
             _chatHistoryWebView.NavigateToString(_document.GetHtml());
         }
 
+        // テスト用／DI 用に ChatHistoryDocument を外部注入できるコンストラクタを追加
+        public ChatHistory(IWebView2Wrapper chatHistoryWebView, Brush foregroundBrush, ChatHistoryDocument document, IThemeProvider themeProvider)
+        {
+            _chatHistoryWebView = chatHistoryWebView ?? throw new ArgumentNullException(nameof(chatHistoryWebView));
+            _foregroundBrush = foregroundBrush ?? throw new ArgumentNullException(nameof(foregroundBrush));
+            _document = document ?? throw new ArgumentNullException(nameof(document));
+            _themeProvider = themeProvider ?? throw new ArgumentNullException(nameof(themeProvider));
+
+            // テスト用の場合、_assistantIconBase64 は document 側の値を利用
+            _assistantIconBase64 = string.Empty;
+            _conversationMemory = new ConversationBufferMemory();
+            _chatHistoryWebView.NavigateToString(_document.GetHtml());
+        }
+
         /// <summary>
         /// チャットメッセージを追加し、HTML を更新する
         /// </summary>
         public void AddChatMessage(string senderName, string message)
         {
-            // ChatMessageFormatter を利用してメッセージの HTML スニペットを生成
             string messageBlock = ChatMessageFormatter.FormatMessage(senderName, message, _document.Pipeline, _assistantIconBase64);
             _document.AppendChatMessage(messageBlock);
 
-            // スクリプトを挿入してコピー機能やスクロールを実行
             string script = "<script>addCopyButtons(); scrollToBottom();</script>";
             _document.AppendScript(script);
 
@@ -81,8 +93,7 @@ namespace Shine
             }
 
             var messages = _conversationMemory.ChatHistory.Messages.ToList();
-
-            int humanMessageCount = messages.Count(m => (m.Role).ToString() == "Human");
+            int humanMessageCount = messages.Count(m => m.Role.ToString() == "Human");
 
             if (humanMessageCount > _historyLimit)
             {
@@ -92,15 +103,14 @@ namespace Shine
 
                 for (int i = 0; i < messages.Count; i++)
                 {
-                    if ((messages[i].Role).ToString() == "Human")
+                    if (messages[i].Role.ToString() == "Human")
                     {
                         humanCount++;
                         if (humanCount <= excessPairs)
                         {
-                            messagesToSkip = i + 2; // Human + AI で2メッセージ
-                            if (i + 1 >= messages.Count || (messages[i + 1].Role).ToString() != "Ai")
+                            messagesToSkip = i + 2;
+                            if (i + 1 >= messages.Count || messages[i + 1].Role.ToString() != "Ai")
                             {
-                                // AIメッセージがない場合は1つだけスキップ
                                 messagesToSkip = i + 1;
                             }
                         }
@@ -112,15 +122,13 @@ namespace Shine
                 }
 
                 var newMemory = new ConversationBufferMemory();
-
-                // 残すメッセージを新しいメモリに追加
                 for (int i = messagesToSkip; i < messages.Count; i++)
                 {
-                    if ((messages[i].Role).ToString() == "Human")
+                    if (messages[i].Role.ToString() == "Human")
                     {
                         newMemory.ChatHistory.AddUserMessage(messages[i].Content);
                     }
-                    else if ((messages[i].Role).ToString() == "Ai")
+                    else if (messages[i].Role.ToString() == "Ai")
                     {
                         newMemory.ChatHistory.AddAiMessage(messages[i].Content);
                     }
@@ -136,8 +144,6 @@ namespace Shine
         public void ClearHistory()
         {
             _conversationMemory.Clear();
-
-            // HTML 表示用のドキュメントも初期化
             _document.Initialize();
             _chatHistoryWebView.NavigateToString(_document.GetHtml());
         }
@@ -148,8 +154,6 @@ namespace Shine
         public void SetHistoryLimit(int limit)
         {
             _document.MaxChatHistoryCount = limit;
-
-            // Human-AI ペアの数なので、オプションの ChatHistoryCount に設定
             _historyLimit = limit / 2;
             AdjustConversationMemory();
         }
@@ -157,14 +161,12 @@ namespace Shine
         /// <summary>
         /// 会話履歴を整形して返すメソッド
         /// </summary>
-        /// <returns></returns>
         public string GetConversationHistory()
         {
             StringBuilder sb = new StringBuilder();
             foreach (var msg in _conversationMemory.ChatHistory.Messages)
             {
-                // TODO: 何回目の履歴かを情報に加える
-                sb.AppendLine($"{msg.GetType().Name}: {msg.ToString()}");
+                sb.AppendLine($"{msg.GetType().Name}: {msg}");
             }
             return sb.ToString();
         }

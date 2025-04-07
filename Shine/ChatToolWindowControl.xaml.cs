@@ -74,7 +74,7 @@ namespace Shine
 
             if (_chatHistoryManager == null)
             {
-                _chatHistoryManager = new ChatHistory(ChatHistoryWebView, _themeManager.ForegroundBrush);
+                _chatHistoryManager = new ChatHistory(new WebView2Wrapper(ChatHistoryWebView), _themeManager.ForegroundBrush);
 
                 var options = (AiAssistantOptions)ShinePackage.Instance.GetDialogPage(typeof(AiAssistantOptions));
                 _chatHistoryManager.SetHistoryLimit(options.ChatHistoryCount * 2);

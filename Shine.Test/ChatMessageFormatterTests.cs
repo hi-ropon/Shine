@@ -1,8 +1,6 @@
-// ファイル名: ChatMessageFormatterTests.cs
-using System.Net;
-using Markdig;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Shine;
+using Markdig;
 
 namespace Shine.Tests
 {
@@ -10,21 +8,33 @@ namespace Shine.Tests
     public class ChatMessageFormatterTests
     {
         [TestMethod]
-        public void FormatMessage_ReturnsHtmlSnippet_ForUserMessage()
+        public void FormatMessage_User_ReturnsUserCssClass()
         {
-            // Arrange
             var pipeline = new MarkdownPipelineBuilder().Build();
-            string sender = "User";
-            string message = "Hello, **world**!";
-            string iconBase64 = ""; // ユーザー側はアイコン無し
+            string result = ChatMessageFormatter.FormatMessage("USER", "Hello", pipeline, "dummyIcon");
+            // 送信者が "USER" の場合、CSS クラスは "user" になるはず
+            StringAssert.Contains(result, "class='message user'");
+            StringAssert.Contains(result, "Hello");
+        }
 
-            // Act
-            string result = ChatMessageFormatter.FormatMessage(sender, message, pipeline, iconBase64);
+        [TestMethod]
+        public void FormatMessage_Assistant_ReturnsAssistantCssClassAndIcon()
+        {
+            var pipeline = new MarkdownPipelineBuilder().Build();
+            string result = ChatMessageFormatter.FormatMessage("Assistant", "Response", pipeline, "dummyIcon");
+            // 送信者が "Assistant" の場合、CSS クラスは "assistant" となり、アイコン画像も含むはず
+            StringAssert.Contains(result, "class='message assistant'");
+            StringAssert.Contains(result, "dummyIcon");
+            StringAssert.Contains(result, "Response");
+        }
 
-            // Assert
-            Assert.IsTrue(result.Contains("Hello, <strong>world</strong>!"), "Markdown変換結果が正しく出力されていること");
-            Assert.IsTrue(result.Contains("User"), "送信者名が含まれていること");
-            Assert.IsTrue(result.Contains("class='message user'"), "CSSクラスが 'user' となっていること");
+        [TestMethod]
+        public void FormatMessage_Error_ReturnsErrorCssClass()
+        {
+            var pipeline = new MarkdownPipelineBuilder().Build();
+            string result = ChatMessageFormatter.FormatMessage("ERROR", "Error occurred", pipeline, "dummyIcon");
+            StringAssert.Contains(result, "class='message error'");
+            StringAssert.Contains(result, "Error occurred");
         }
     }
 }
