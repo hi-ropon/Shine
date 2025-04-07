@@ -9,7 +9,7 @@ using Task = System.Threading.Tasks.Task;
 
 namespace Shine
 {
-    internal sealed class ShowAiChatCommand
+    public sealed class ShowAiChatCommand
     {
         public const int commandId = 0x0100;
         public static readonly Guid commandSet = new Guid("D1234567-89AB-CDEF-0123-456789ABCDEF");
