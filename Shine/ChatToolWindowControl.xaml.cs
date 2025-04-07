@@ -195,7 +195,17 @@ namespace Shine
 
                 // 会話履歴を取得して、現在の入力に結合する
                 string conversationHistory = _chatHistoryManager.GetConversationHistory();
-                string fullPrompt = conversationHistory + "\n" + processedInput;
+                string fullPrompt;
+
+                if (!string.IsNullOrEmpty(conversationHistory))
+                {
+                    fullPrompt = "#参考情報\n#過去の会話履歴 Start\n" + conversationHistory + "#過去の会話履歴 End\n\n" + processedInput;
+                }
+                else
+                {
+                    fullPrompt = processedInput;
+                }
+
                 UpdateTokenCount(fullPrompt);
 
                 reply = await _chatClientService.GetChatResponseAsync(fullPrompt);
