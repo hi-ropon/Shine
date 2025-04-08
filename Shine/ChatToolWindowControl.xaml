@@ -6,6 +6,10 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="400">
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="21*"/>
+            <ColumnDefinition Width="79*"/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <!-- チャット履歴表示 -->
             <RowDefinition Height="*" />
@@ -20,18 +24,18 @@
         </Grid.RowDefinitions>
 
         <!-- チャット履歴表示部分 -->
-        <wv2:WebView2 x:Name="ChatHistoryWebView" Grid.Row="0" Margin="5"/>
+        <wv2:WebView2 x:Name="ChatHistoryWebView" Grid.Row="0" Margin="5,5,5,5" Grid.ColumnSpan="2"/>
 
         <!-- ローディングアイコンとしてのプログレスバー -->
         <ProgressBar x:Name="LoadingProgressBar"
                      Grid.Row="1"
                      Height="20"
-                     Margin="5"
+                     Margin="5,5,5,5"
                      IsIndeterminate="True"
-                     Visibility="Collapsed"/>
+                     Visibility="Caollapsed" Grid.ColumnSpan="2"/>
 
         <!-- 入力リッチテキストボックス（トークン表示エリアは削除） -->
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="2" Grid.ColumnSpan="2" Margin="0,0,0,43" Grid.RowSpan="2">
             <!-- 入力リッチテキストボックス -->
             <RichTextBox x:Name="InputRichTextBox"
                          Margin="5"
@@ -66,7 +70,7 @@
         </Grid>
 
         <!-- チェックボックスと補足テキスト -->
-        <Grid Grid.Row="3" Margin="5">
+        <Grid Grid.Row="3" Margin="5,5,5,5" Grid.ColumnSpan="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -86,7 +90,7 @@
         </Grid>
 
         <!-- ボタン類 -->
-        <Grid Grid.Row="4" Margin="5">
+        <Grid Grid.Row="4" Margin="5,5,5,5" Grid.ColumnSpan="2">
             <Grid.ColumnDefinitions>
                 <!-- 有効化ボタン -->
                 <ColumnDefinition Width="Auto"/>
