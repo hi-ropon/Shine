@@ -38,6 +38,10 @@ namespace Shine
             _settingsManager.InitializeSettings();
             _settingsManager.UpdateModelComboBox();
 
+#if !DEBUG
+            EnableButton.Visibility = Visibility.Collapsed;
+#endif
+
             VSColorTheme.ThemeChanged += OnThemeChanged;
             this.Unloaded += ChatToolWindowControl_Unloaded;
             this.Loaded += ChatToolWindowControl_Loaded;
