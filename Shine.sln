@@ -5,7 +5,7 @@ VisualStudioVersion = 17.13.35913.81
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shine", "Shine\Shine.csproj", "{1EBBFC61-2179-4775-99B7-A45C0F92342C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shine.Test", "Shine.Test\Shine.Test.csproj", "{D3C6B3C3-696A-446F-80CC-2378B4D679F8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shine.Tests", "Shine.Test\Shine.Tests.csproj", "{D3C6B3C3-696A-446F-80CC-2378B4D679F8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
