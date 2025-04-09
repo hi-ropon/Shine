@@ -53,6 +53,8 @@
     </Compile>
     <Compile Include="Chat\IWebView2Wrapper.cs" />
     <Compile Include="Chat\WebView2Wrapper.cs" />
+    <Compile Include="Git\GitDiffHelper.cs" />
+    <Compile Include="Git\GitDiffSummarizer.cs" />
     <Compile Include="Helpers\BrushHelper.cs" />
     <Compile Include="Chat\ChatHistoryDocument.cs" />
     <Compile Include="Chat\ChatMessageFormatter.cs" />

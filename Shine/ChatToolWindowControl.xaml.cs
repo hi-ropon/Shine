@@ -390,6 +390,56 @@ namespace Shine
             _chatHistoryManager.ClearHistory();
         }
 
+        private async void SummarizeDiffButton_Click(object sender, RoutedEventArgs e)
+        {
+            // ソリューションが開かれているかチェックし、作業ディレクトリ（ソリューションのフォルダ）を取得
+            DTE2 dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
+            if (dte?.Solution?.FullName == null)
+            {
+                MessageBox.Show("ソリューションが開かれていません。");
+                return;
+            }
+            string solutionPath = System.IO.Path.GetDirectoryName(dte.Solution.FullName);
+
+            // AiAssistantOptions からプロバイダーと関連情報を取得
+            AiAssistantOptions options = (AiAssistantOptions)ShinePackage.Instance.GetDialogPage(typeof(AiAssistantOptions));
+            if (options == null)
+            {
+                MessageBox.Show("オプションが取得できませんでした。");
+                return;
+            }
+
+            IChatClientService chatService = null;
+            if (options.Provider == OpenAiProvider.OpenAI)
+            {
+                chatService = new OpenAiClientService(options.OpenAIApiKey, "gpt-4o-mini", options.Temperature);
+            }
+            else if (options.Provider == OpenAiProvider.AzureOpenAI)
+            {
+                chatService = new AzureOpenAiClientService(options.AzureOpenAIEndpoint, options.AzureOpenAIApiKey, "gpt-4o-mini", options.Temperature);
+            }
+            else
+            {
+                MessageBox.Show("未サポートのプロバイダーです。");
+                return;
+            }
+
+            if (chatService == null)
+            {
+                MessageBox.Show("AI サービスの初期化に失敗しました。オプションを確認してください。");
+                return;
+            }
+
+            LoadingProgressBar.Visibility = Visibility.Visible;
+            
+            GitDiffSummarizer diffSummarizer = new GitDiffSummarizer(chatService, solutionPath);
+            string diffSummary = await diffSummarizer.SummarizeDiffAsync();
+
+            LoadingProgressBar.Visibility = Visibility.Collapsed;
+
+            _chatHistoryManager.AddChatMessage("Assistant", diffSummary);
+        }
+
         private void ChatToolWindowControl_Unloaded(object sender, RoutedEventArgs e)
         {
             _mentionManager.Dispose();
