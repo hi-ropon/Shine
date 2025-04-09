@@ -127,22 +127,27 @@
                          FontSize="12" />
             </StackPanel>
 
-            <!-- クリア / 送信ボタン -->
             <StackPanel Grid.Column="3"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Right">
+                Orientation="Horizontal"
+                HorizontalAlignment="Right">
+                <Button x:Name="SummarizeDiffButton"
+                    Content="要約"
+                    Margin="5"
+                    Width="50"
+                    Height="30"
+                    Click="SummarizeDiffButton_Click" />
                 <Button x:Name="ClearButton"
-                        Content="クリア"
-                        Margin="5"
-                        Width="50"
-                        Height="30"
-                        Click="ClearButton_Click" />
+                    Content="クリア"
+                    Margin="5"
+                    Width="50"
+                    Height="30"
+                Click="ClearButton_Click" />
                 <Button x:Name="SendButton"
-                        Content="送信"
-                        Margin="5"
-                        Width="50"
-                        Height="30"
-                        Click="SendButton_Click" />
+                    Content="送信"
+                    Margin="5"
+                    Width="50"
+                    Height="30"
+                    Click="SendButton_Click" />
             </StackPanel>
         </Grid>
     </Grid>
