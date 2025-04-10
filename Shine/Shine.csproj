@@ -53,8 +53,8 @@
     </Compile>
     <Compile Include="Chat\IWebView2Wrapper.cs" />
     <Compile Include="Chat\WebView2Wrapper.cs" />
-    <Compile Include="Git\GitDiffHelper.cs" />
-    <Compile Include="Git\GitDiffSummarizer.cs" />
+    <Compile Include="GitServices\GitDiffHelper.cs" />
+    <Compile Include="GitServices\GitDiffSummarizer.cs" />
     <Compile Include="Helpers\BrushHelper.cs" />
     <Compile Include="Chat\ChatHistoryDocument.cs" />
     <Compile Include="Chat\ChatMessageFormatter.cs" />
@@ -72,9 +72,9 @@
     <Compile Include="ModelNameEditor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Helpers\ResourceHelper.cs" />
-    <Compile Include="Services\AzureOpenAiClientService.cs" />
-    <Compile Include="Services\IChatClientService.cs" />
-    <Compile Include="Services\OpenAiClientService.cs" />
+    <Compile Include="ClientServices\AzureOpenAiClientService.cs" />
+    <Compile Include="ClientServices\IChatClientService.cs" />
+    <Compile Include="ClientServices\OpenAiClientService.cs" />
     <Compile Include="ShinePackage.cs" />
     <Compile Include="ShowAiChatCommand.cs" />
   </ItemGroup>
