@@ -379,10 +379,40 @@ namespace Shine
             return sb.ToString();
         }
 
+        /// <summary>
+        /// EnableButton が押された際に、Azure プロバイダーの場合、設定されている API キー、エンドポイント、モデル名を ChatHistory に表示します。
+        /// </summary>
         private void EnableButton_Click(object sender, RoutedEventArgs e)
         {
             _settingsManager.InitializeSettings();
             _settingsManager.UpdateModelComboBox();
+
+            var package = ShinePackage.Instance;
+            if (package == null)
+            {
+                MessageBox.Show("Package がロードされていません。");
+                return;
+            }
+            AiAssistantOptions options = null;
+            try
+            {
+                options = (AiAssistantOptions)package.GetDialogPage(typeof(AiAssistantOptions));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error getting DialogPage in EnableButton: {ex}");
+                return;
+            }
+
+            // プロバイダーが AzureOpenAI の場合のみ、設定情報を ChatHistory に表示
+            if (options != null && options.Provider == OpenAiProvider.AzureOpenAI)
+            {
+                string settingsMessage = $"【Azure OpenAI 設定】\nエンドポイント: {options.AzureOpenAIEndpoint}\nAPI キー: {options.AzureOpenAIApiKey}\nモデル: {options.AzureDeploymentName}";
+                if (_chatHistoryManager != null)
+                {
+                    _chatHistoryManager.AddChatMessage("System", settingsMessage);
+                }
+            }
         }
 
         private void ClearButton_Click(object sender, RoutedEventArgs e)
@@ -431,7 +461,7 @@ namespace Shine
             }
 
             LoadingProgressBar.Visibility = Visibility.Visible;
-            
+
             GitDiffSummarizer diffSummarizer = new GitDiffSummarizer(chatService, solutionPath);
             string diffSummary = await diffSummarizer.SummarizeDiffAsync();
 
