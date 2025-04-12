@@ -15,8 +15,17 @@ namespace Shine
     [Guid("B1234567-89AB-CDEF-0123-456789ABCDEF")] // ※適宜 GUID を生成してください
     public sealed class ShinePackage : AsyncPackage
     {
+        /// <summary>
+        /// ShinePackage のインスタンスを取得します
+        /// </summary>
         public static ShinePackage Instance { get; private set; }
 
+        /// <summary>
+        /// このメソッドは、パッケージの初期化を行います
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <param name="progress"></param>
+        /// <returns></returns>
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
             // UIスレッドが必要な初期化は、このメソッドの中で行います

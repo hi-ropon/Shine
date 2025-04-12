@@ -21,6 +21,12 @@ namespace Shine
         private int _historyLimit = 5;
         private readonly IThemeProvider _themeProvider;
 
+        /// <summary>
+        /// コンストラクタ
+        /// </summary>
+        /// <param name="chatHistoryWebView"></param>
+        /// <param name="foregroundBrush"></param>
+        /// <exception cref="ArgumentNullException"></exception>
         public ChatHistory(IWebView2Wrapper chatHistoryWebView, Brush foregroundBrush)
         {
             _chatHistoryWebView = chatHistoryWebView ?? throw new ArgumentNullException(nameof(chatHistoryWebView));
@@ -34,7 +40,14 @@ namespace Shine
             _chatHistoryWebView.NavigateToString(_document.GetHtml());
         }
 
-        // テスト用／DI 用に ChatHistoryDocument を外部注入できるコンストラクタを追加
+        /// <summary>
+        /// コンストラクタ（テーマプロバイダを利用する場合）
+        /// </summary>
+        /// <param name="chatHistoryWebView"></param>
+        /// <param name="foregroundBrush"></param>
+        /// <param name="document"></param>
+        /// <param name="themeProvider"></param>
+        /// <exception cref="ArgumentNullException"></exception>
         public ChatHistory(IWebView2Wrapper chatHistoryWebView, Brush foregroundBrush, ChatHistoryDocument document, IThemeProvider themeProvider)
         {
             _chatHistoryWebView = chatHistoryWebView ?? throw new ArgumentNullException(nameof(chatHistoryWebView));

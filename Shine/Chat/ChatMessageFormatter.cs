@@ -5,6 +5,9 @@ using Markdig;
 
 namespace Shine
 {
+    /// <summary>
+    /// チャットメッセージのフォーマットを行うクラス
+    /// </summary>
     public static class ChatMessageFormatter
     {
         /// <summary>

@@ -2,6 +2,9 @@
 
 namespace Shine
 {
+    /// <summary>
+    /// Brush に関するヘルパークラス
+    /// </summary>
     public static class BrushHelper
     {
         /// <summary>

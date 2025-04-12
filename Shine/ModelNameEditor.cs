@@ -5,12 +5,28 @@ using System.Windows.Forms;
 using System.Windows.Forms.Design;
 namespace Shine
 {
+    /// <summary>
+    /// モデル名を選択するためのエディタ
+    /// </summary>
     public class ModelNameEditor : UITypeEditor
     {
+        /// <summary>
+        /// エディタのスタイルを指定する
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
         public override UITypeEditorEditStyle GetEditStyle(ITypeDescriptorContext context)
         {
             return UITypeEditorEditStyle.DropDown;
         }
+
+        /// <summary>
+        /// ドロップダウンリストを表示する
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="provider"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
         public override object EditValue(ITypeDescriptorContext context, IServiceProvider provider, object value)
         {
             if (context?.Instance is AiAssistantOptions options && provider != null)

@@ -10,13 +10,22 @@ namespace Shine
     /// </summary>
     public class Theme
     {
+        /// <summary>
+        /// ツールウィンドウの文字色
+        /// </summary>
         public Brush ForegroundBrush { get; private set; }
 
+        /// <summary>
+        /// コンストラクター
+        /// </summary>
         public Theme()
         {
             UpdateTheme();
         }
 
+        /// <summary>
+        /// VS のテーマに合わせて ForegroundBrush を更新する
+        /// </summary>
         public void UpdateTheme()
         {
             var drawingColor = VSColorTheme.GetThemedColor(EnvironmentColors.ToolWindowTextColorKey);

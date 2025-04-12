@@ -1,7 +1,4 @@
-﻿using System.Drawing;
-using System.IO;
-using System.Runtime.InteropServices;
-using Microsoft.VisualStudio.Shell;
+﻿using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.ComponentModel.Design;
@@ -9,12 +6,21 @@ using Task = System.Threading.Tasks.Task;
 
 namespace Shine
 {
+    /// <summary>
+    /// Command handler
+    /// </summary>
     public sealed class ShowAiChatCommand
     {
         public const int commandId = 0x0100;
         public static readonly Guid commandSet = new Guid("D1234567-89AB-CDEF-0123-456789ABCDEF");
         private readonly AsyncPackage _package;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ShowAiChatCommand"/> class
+        /// </summary>
+        /// <param name="package"></param>
+        /// <param name="commandService"></param>
+        /// <exception cref="ArgumentNullException"></exception>
         private ShowAiChatCommand(AsyncPackage package, IMenuCommandService commandService)
         {
             this._package = package ?? throw new ArgumentNullException(nameof(package));
@@ -25,6 +31,11 @@ namespace Shine
             commandService.AddCommand(menuItem);
         }
 
+        /// <summary>
+        /// Initializes the singleton instance of the command
+        /// </summary>
+        /// <param name="package"></param>
+        /// <returns></returns>
         public static async Task InitializeAsync(AsyncPackage package)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
@@ -32,6 +43,12 @@ namespace Shine
             new ShowAiChatCommand(package, commandService);
         }
 
+        /// <summary>
+        /// Executes the command when the menu item is clicked
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        /// <exception cref="NotSupportedException"></exception>
         private void Execute(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();

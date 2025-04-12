@@ -6,12 +6,18 @@ using System.Drawing.Design;
 
 namespace Shine
 {
+    /// <summary>
+    /// OpenAI プロバイダーの種類を定義する列挙体
+    /// </summary>
     public enum OpenAiProvider
     {
         OpenAI,
         AzureOpenAI
     }
 
+    /// <summary>
+    /// AI アシスタントのオプションを定義するクラス
+    /// </summary>
     public class AiAssistantOptions : DialogPage
     {
 #if DEBUG
@@ -83,6 +89,10 @@ namespace Shine
             set { _chatHistoryCount = Math.Max(0, Math.Min(10, value)); }
         }
 
+        /// <summary>
+        /// オプションの適用時に呼び出されるメソッド
+        /// </summary>
+        /// <param name="e"></param>
         protected override void OnApply(PageApplyEventArgs e)
         {
             base.OnApply(e);

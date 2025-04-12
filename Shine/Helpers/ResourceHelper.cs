@@ -4,6 +4,9 @@ using System.Reflection;
 
 namespace Shine
 {
+    /// <summary>
+    /// リソースに関するヘルパークラス
+    /// </summary>
     public static class ResourceHelper
     {
         /// <summary>

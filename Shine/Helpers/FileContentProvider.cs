@@ -12,6 +12,11 @@ namespace Shine
     /// </summary>
     public class FileContentProvider
     {
+        /// <summary>
+        /// 指定されたファイル名に対応するファイルの内容を取得します
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <returns></returns>
         public string GetFileContent(string fileName)
         {
             // UIスレッドでなければUIスレッドに切り替える
@@ -60,6 +65,12 @@ namespace Shine
             }
         }
 
+        /// <summary>
+        /// 指定されたソリューション内のプロジェクトを反復処理し、指定されたファイル名に一致するファイルを検索します
+        /// </summary>
+        /// <param name="solution"></param>
+        /// <param name="fileName"></param>
+        /// <returns></returns>
         public string FindFileInProject(Solution solution, string fileName)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -88,6 +99,12 @@ namespace Shine
             return null;
         }
 
+        /// <summary>
+        /// 指定されたプロジェクトアイテム内を再帰的に検索し、指定されたファイル名に一致するファイルを探します
+        /// </summary>
+        /// <param name="items"></param>
+        /// <param name="fileName"></param>
+        /// <returns></returns>
         private string FindFileInProjectItems(ProjectItems items, string fileName)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -116,6 +133,12 @@ namespace Shine
             return null;
         }
 
+        /// <summary>
+        /// 指定されたプロジェクトアイテムを再帰的に検索し、指定されたファイル名に一致するファイルのパスを取得します
+        /// </summary>
+        /// <param name="item"></param>
+        /// <param name="fileName"></param>
+        /// <returns></returns>
         private string GetFilePathFromProjectItemRecursive(ProjectItem item, string fileName)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
