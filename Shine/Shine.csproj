@@ -163,6 +163,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
+    <Resource Include="Resources\IconSend.png" />
+    <Resource Include="Resources\IconClear.png" />
+    <Resource Include="Resources\IconSummary.png" />
     <Content Include="System.IO.Pipelines.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>

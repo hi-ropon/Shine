@@ -1,4 +1,5 @@
-﻿<UserControl x:Class="Shine.ChatToolWindowControl"
+﻿<!-- ChatToolWindowControl.xaml -->
+<UserControl x:Class="Shine.ChatToolWindowControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -30,24 +31,21 @@
                      IsIndeterminate="True"
                      Visibility="Collapsed"/>
 
-        <!-- 入力リッチテキストボックス（トークン表示エリアは削除） -->
+        <!-- 入力リッチテキストボックス -->
         <Grid Grid.Row="2">
-            <!-- 入力リッチテキストボックス -->
             <RichTextBox x:Name="InputRichTextBox"
                          Margin="5"
                          Height="80"
                          TextChanged="InputRichTextBox_TextChanged"
                          KeyDown="InputRichTextBox_KeyDown">
                 <RichTextBox.Resources>
-                    <!-- Paragraph の既定スタイルを上書き -->
                     <Style TargetType="Paragraph">
                         <Setter Property="Margin" Value="0" />
                         <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
                     </Style>
                 </RichTextBox.Resources>
             </RichTextBox>
-
-            <!-- 候補を表示するポップアップ -->
+            <!-- 候補表示用ポップアップ -->
             <Popup x:Name="MentionPopup"
                    Placement="Top"
                    PlacementTarget="{Binding ElementName=InputRichTextBox}"
@@ -105,6 +103,7 @@
                     Width="50"
                     Height="30"
                     Click="EnableButton_Click"
+                    ToolTip="チャット機能を有効にします"
                     Grid.Column="0" />
 
             <!-- プルダウンメニュー（ComboBox） -->
@@ -128,26 +127,46 @@
             </StackPanel>
 
             <StackPanel Grid.Column="3"
-                Orientation="Horizontal"
-                HorizontalAlignment="Right">
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <!-- 要約ボタン -->
                 <Button x:Name="SummarizeDiffButton"
-                    Content="要約"
-                    Margin="5"
-                    Width="50"
-                    Height="30"
-                    Click="SummarizeDiffButton_Click" />
+                        Margin="5"
+                        Width="40"
+                        Height="30"
+                        Click="SummarizeDiffButton_Click"
+                        Background="White"
+                        ToolTip="コミットメッセージを生成します（不正確である可能性があります）"
+                        BorderThickness="0"
+                        BorderBrush="Transparent">
+                    <Image Source="Resources/IconSummary.png" Stretch="Uniform"/>
+                </Button>
+
+                <!-- クリアボタン -->
                 <Button x:Name="ClearButton"
-                    Content="クリア"
-                    Margin="5"
-                    Width="50"
-                    Height="30"
-                Click="ClearButton_Click" />
+                        Margin="5"
+                        Width="40"
+                        Height="30"
+                        Click="ClearButton_Click"
+                        Background="White"
+                        ToolTip="チャットをクリアします"
+                        BorderThickness="0"
+                        BorderBrush="Transparent">
+                    <Image Source="Resources/IconClear.png" Stretch="Uniform"/>
+                </Button>
+
+                <!-- 送信ボタン -->
                 <Button x:Name="SendButton"
-                    Content="送信"
-                    Margin="5"
-                    Width="50"
-                    Height="30"
-                    Click="SendButton_Click" />
+                        Margin="5"
+                        Width="50"
+                        Height="30"
+                        Click="SendButton_Click"
+                        Background="White"
+                        ToolTip="質問を送信します"
+                        BorderThickness="0"
+                        BorderBrush="Transparent">
+                    <Image Source="Resources/IconSend.png" Stretch="Uniform"/>
+                </Button>
             </StackPanel>
         </Grid>
     </Grid>

@@ -11,6 +11,7 @@ using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.ML.Tokenizers;
+using System.IO;
 
 namespace Shine
 {
@@ -24,6 +25,9 @@ namespace Shine
         private Mention _mentionManager;
         private readonly Tokenizer _tokenizer;
 
+        /// <summary>
+        /// コンストラクタ
+        /// </summary>
         public ChatToolWindowControl()
         {
             InitializeComponent();
@@ -49,6 +53,11 @@ namespace Shine
             _tokenizer = TiktokenTokenizer.CreateForModel("gpt-4o");
         }
 
+        /// <summary>
+        /// RichTextBox にペーストされたデータを処理します
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void OnPaste(object sender, DataObjectPastingEventArgs e)
         {
             if (e.SourceDataObject.GetDataPresent(DataFormats.UnicodeText, true))
@@ -64,6 +73,11 @@ namespace Shine
             }
         }
 
+        /// <summary>
+        /// WebView2 の初期化を行います
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private async void ChatToolWindowControl_Loaded(object sender, RoutedEventArgs e)
         {
             if (ChatHistoryWebView.CoreWebView2 == null)
@@ -85,21 +99,37 @@ namespace Shine
             }
         }
 
+        /// <summary>
+        /// 設定を初期化します
+        /// </summary>
         public void InitializeSettings()
         {
             _settingsManager.InitializeSettings();
         }
 
+        /// <summary>
+        /// モデルコンボボックスを更新します
+        /// </summary>
         public void UpdateModelComboBox()
         {
             _settingsManager.UpdateModelComboBox();
         }
 
+        /// <summary>
+        /// RichTextBox の KeyDown イベントを処理します
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void InputRichTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             _mentionManager.OnInputKeyDown(sender, e);
         }
 
+        /// <summary>
+        /// RichTextBox の TextChanged イベントを処理します
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void InputRichTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             _mentionManager.OnInputTextChanged(sender, e);
@@ -114,16 +144,29 @@ namespace Shine
             TokenCountTextBox.Text = tokenCount.ToString();
         }
 
+        /// <summary>
+        /// MentionListBox の KeyDown イベントを処理します
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void MentionListBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             _mentionManager.OnMentionListPreviewKeyDown(sender, e);
         }
 
+        /// <summary>
+        /// MentionListBox の MouseDoubleClick イベントを処理します
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void MentionListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             _mentionManager.OnMentionListMouseDoubleClick(sender, e);
         }
 
+        /// <summary>
+        /// テーマ変更時に、RichTextBox の色を更新します
+        /// </summary>
         private void ThemeColor()
         {
             _themeManager.UpdateTheme();
@@ -141,6 +184,10 @@ namespace Shine
             }
         }
 
+        /// <summary>
+        /// VS のテーマ変更イベントを処理します
+        /// </summary>
+        /// <param name="e"></param>
         private void OnThemeChanged(ThemeChangedEventArgs e)
         {
             Dispatcher.Invoke(async () =>
@@ -154,12 +201,22 @@ namespace Shine
             });
         }
 
+        /// <summary>
+        /// モデルコンボボックスの選択変更イベントを処理します
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ModelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             _settingsManager.OnModelComboBoxSelectionChanged(sender, e);
             _settingsManager.InitializeSettings();
         }
 
+        /// <summary>
+        /// 送信ボタンがクリックされた際の処理を行います
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private async void SendButton_Click(object sender, RoutedEventArgs e)
         {
             _settingsManager.InitializeSettings();
@@ -230,6 +287,11 @@ namespace Shine
             }
         }
 
+        /// <summary>
+        /// ユーザーの入力を処理して、ファイルの内容を取得します
+        /// </summary>
+        /// <param name="userInput"></param>
+        /// <returns></returns>
         private string ProcessUserInputForFileContent(string userInput)
         {
             StringBuilder processedInput = new StringBuilder(userInput);
@@ -294,6 +356,10 @@ namespace Shine
             return processedInput.ToString();
         }
 
+        /// <summary>
+        /// オープンドキュメントの内容を取得します
+        /// </summary>
+        /// <returns></returns>
         private string GetOpenDocumentsContent()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -412,24 +478,52 @@ namespace Shine
             }
         }
 
+        /// <summary>
+        /// クリアボタンが押された際に、チャット履歴をクリアします
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ClearButton_Click(object sender, RoutedEventArgs e)
         {
             _chatHistoryManager.ClearHistory();
         }
 
+        /// <summary>
+        /// Git の差分を要約します
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private async void SummarizeDiffButton_Click(object sender, RoutedEventArgs e)
         {
-            // ソリューションが開かれているかチェックし、作業ディレクトリ（ソリューションのフォルダ）を取得
-            DTE2 dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
-            if (dte?.Solution?.FullName == null)
+            string solutionPath = "";
+            try
             {
-                MessageBox.Show("ソリューションが開かれていません。");
+                // DTE2 を取得してソリューションのパスを取得
+                DTE2 dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
+                if (dte?.Solution?.FullName == null)
+                {
+                    MessageBox.Show("ソリューションが開かれていません。");
+                    return;
+                }
+                solutionPath = System.IO.Path.GetDirectoryName(dte.Solution.FullName);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("ソリューション情報の取得中にエラーが発生しました: " + ex.Message);
                 return;
             }
-            string solutionPath = System.IO.Path.GetDirectoryName(dte.Solution.FullName);
 
-            // AiAssistantOptions からプロバイダーと関連情報を取得
-            AiAssistantOptions options = (AiAssistantOptions)ShinePackage.Instance.GetDialogPage(typeof(AiAssistantOptions));
+            // AiAssistantOptions からプロバイダー情報等を取得
+            AiAssistantOptions options = null;
+            try
+            {
+                options = (AiAssistantOptions)ShinePackage.Instance.GetDialogPage(typeof(AiAssistantOptions));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("オプションの取得中にエラーが発生しました: " + ex.Message);
+                return;
+            }
             if (options == null)
             {
                 MessageBox.Show("オプションが取得できませんでした。");
@@ -437,20 +531,27 @@ namespace Shine
             }
 
             IChatClientService chatService = null;
-            if (options.Provider == OpenAiProvider.OpenAI)
+            try
             {
-                chatService = new OpenAiClientService(options.OpenAIApiKey, "gpt-4o-mini", options.Temperature);
+                if (options.Provider == OpenAiProvider.OpenAI)
+                {
+                    chatService = new OpenAiClientService(options.OpenAIApiKey, "gpt-4o-mini", options.Temperature);
+                }
+                else if (options.Provider == OpenAiProvider.AzureOpenAI)
+                {
+                    chatService = new AzureOpenAiClientService(options.AzureOpenAIEndpoint, options.AzureOpenAIApiKey, "gpt-4o-mini", options.Temperature);
+                }
+                else
+                {
+                    MessageBox.Show("未サポートのプロバイダーです。");
+                    return;
+                }
             }
-            else if (options.Provider == OpenAiProvider.AzureOpenAI)
+            catch (Exception ex)
             {
-                chatService = new AzureOpenAiClientService(options.AzureOpenAIEndpoint, options.AzureOpenAIApiKey, "gpt-4o-mini", options.Temperature);
-            }
-            else
-            {
-                MessageBox.Show("未サポートのプロバイダーです。");
+                MessageBox.Show("AIサービスの初期化中にエラーが発生しました: " + ex.Message);
                 return;
             }
-
             if (chatService == null)
             {
                 MessageBox.Show("AI サービスの初期化に失敗しました。オプションを確認してください。");
@@ -458,15 +559,41 @@ namespace Shine
             }
 
             LoadingProgressBar.Visibility = Visibility.Visible;
-
-            GitDiffSummarizer diffSummarizer = new GitDiffSummarizer(chatService, solutionPath);
-            string diffSummary = await diffSummarizer.SummarizeDiffAsync();
-
-            LoadingProgressBar.Visibility = Visibility.Collapsed;
+            string diffSummary = string.Empty;
+            try
+            {
+                GitDiffSummarizer diffSummarizer = new GitDiffSummarizer(chatService, solutionPath);
+                diffSummary = await diffSummarizer.SummarizeDiffAsync();
+            }
+            catch (System.ComponentModel.Win32Exception win32Ex)
+            {
+                // Win32Exception は、Gitコマンドが見つからない場合（未インストールなど）に発生することがある
+                MessageBox.Show("Gitが見つかりません。Gitがインストールされていることを確認してください。\n詳細: " + win32Ex.Message);
+                return;
+            }
+            catch (DirectoryNotFoundException dnfe)
+            {
+                MessageBox.Show("作業ディレクトリが見つかりません: " + dnfe.Message);
+                return;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Git差分の要約中にエラーが発生しました: " + ex.Message);
+                return;
+            }
+            finally
+            {
+                LoadingProgressBar.Visibility = Visibility.Collapsed;
+            }
 
             _chatHistoryManager.AddChatMessage("Assistant", diffSummary);
         }
 
+        /// <summary>
+        /// ツールウィンドウがアンロードされた際の処理を行います
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ChatToolWindowControl_Unloaded(object sender, RoutedEventArgs e)
         {
             _mentionManager.Dispose();
