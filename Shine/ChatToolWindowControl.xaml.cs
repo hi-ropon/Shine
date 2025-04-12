@@ -162,15 +162,12 @@ namespace Shine
 
         private async void SendButton_Click(object sender, RoutedEventArgs e)
         {
+            _settingsManager.InitializeSettings();
+            _chatClientService = _settingsManager.ChatClientService;
             if (_chatClientService == null)
             {
-                _settingsManager.InitializeSettings();
-                _chatClientService = _settingsManager.ChatClientService;
-                if (_chatClientService == null)
-                {
-                    MessageBox.Show("AI サービスが初期化されていません。オプションを確認してください。");
-                    return;
-                }
+                MessageBox.Show("AI サービスが初期化されていません。オプションを確認してください。");
+                return;
             }
 
             ThemeColor();
