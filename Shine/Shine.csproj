@@ -53,6 +53,11 @@
     </Compile>
     <Compile Include="Chat\IWebView2Wrapper.cs" />
     <Compile Include="Chat\WebView2Wrapper.cs" />
+    <Compile Include="ClientServices\AzureOpenAI\DefaultAzureChatModelProcessor.cs" />
+    <Compile Include="ClientServices\AzureOpenAI\O1AzureChatModelProcessor.cs" />
+    <Compile Include="ClientServices\OpenAI\DefaultChatModelProcessor.cs" />
+    <Compile Include="ClientServices\OpenAI\O1ChatModelProcessor.cs" />
+    <Compile Include="ClientServices\OpenAI\O3ChatModelProcessor.cs" />
     <Compile Include="GitServices\GitDiffHelper.cs" />
     <Compile Include="GitServices\GitDiffSummarizer.cs" />
     <Compile Include="Helpers\BrushHelper.cs" />
@@ -69,12 +74,13 @@
     <Compile Include="Helpers\Mention.cs" />
     <Compile Include="Helpers\Settings.cs" />
     <Compile Include="Helpers\Theme\Theme.cs" />
+    <Compile Include="ClientServices\IChatModelProcessor.cs" />
     <Compile Include="ModelNameEditor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Helpers\ResourceHelper.cs" />
-    <Compile Include="ClientServices\AzureOpenAiClientService.cs" />
+    <Compile Include="ClientServices\AzureOpenAI\AzureOpenAiClientService.cs" />
     <Compile Include="ClientServices\IChatClientService.cs" />
-    <Compile Include="ClientServices\OpenAiClientService.cs" />
+    <Compile Include="ClientServices\OpenAI\OpenAiClientService.cs" />
     <Compile Include="ShinePackage.cs" />
     <Compile Include="ShowAiChatCommand.cs" />
   </ItemGroup>
