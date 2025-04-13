@@ -54,6 +54,7 @@
     <Compile Include="Chat\IWebView2Wrapper.cs" />
     <Compile Include="Chat\WebView2Wrapper.cs" />
     <Compile Include="ClientServices\AzureOpenAI\DefaultAzureChatModelProcessor.cs" />
+    <Compile Include="ClientServices\AzureOpenAI\O3AzureChatModelProcessor.cs" />
     <Compile Include="ClientServices\AzureOpenAI\O1AzureChatModelProcessor.cs" />
     <Compile Include="ClientServices\OpenAI\DefaultChatModelProcessor.cs" />
     <Compile Include="ClientServices\OpenAI\O1ChatModelProcessor.cs" />
@@ -101,7 +102,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Azure.AI.OpenAI">
-      <Version>2.1.0</Version>
+      <Version>2.2.0-beta.1</Version>
     </PackageReference>
     <PackageReference Include="LangChain">
       <Version>0.17.0</Version>

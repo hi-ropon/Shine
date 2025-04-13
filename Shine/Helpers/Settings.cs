@@ -5,16 +5,29 @@ using Microsoft.VisualStudio.Shell;
 
 namespace Shine
 {
+    /// <summary>
+    /// Settings クラスは、AI アシスタントの設定を管理します
+    /// </summary>
     public class Settings
     {
+        /// <summary>
+        /// ChatClientService は、OpenAI のチャットモデルを処理するためのサービスです
+        /// </summary>
         public IChatClientService ChatClientService { get; private set; }
         private readonly ComboBox _modelComboBox;
 
+        /// <summary>
+        /// Settings クラスのコンストラクタ
+        /// </summary>
+        /// <param name="modelComboBox"></param>
         public Settings(ComboBox modelComboBox)
         {
             _modelComboBox = modelComboBox;
         }
 
+        /// <summary>
+        /// InitializeSettings メソッドは、AI アシスタントの設定を初期化します
+        /// </summary>
         public void InitializeSettings()
         {
             var package = ShinePackage.Instance;
@@ -79,6 +92,9 @@ namespace Shine
             }
         }
 
+        /// <summary>
+        /// UpdateModelComboBox メソッドは、モデルのコンボボックスを更新します
+        /// </summary>
         public void UpdateModelComboBox()
         {
             var package = ShinePackage.Instance;
@@ -137,6 +153,11 @@ namespace Shine
             }
         }
 
+        /// <summary>
+        /// OnModelComboBoxSelectionChanged メソッドは、モデルのコンボボックスの選択が変更されたときに呼び出されます
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         public void OnModelComboBoxSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_modelComboBox.SelectedItem == null) return;

@@ -5,6 +5,9 @@ using System.Text;
 
 namespace Shine
 {
+    /// <summary>
+    /// GitDiffHelper クラスは、Git リポジトリの差分を取得するためのヘルパークラス
+    /// </summary>
     public static class GitDiffHelper
     {
         /// <summary>

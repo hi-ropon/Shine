@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Azure.AI.OpenAI;
 using OpenAI.Chat;
 
 namespace Shine
@@ -7,7 +6,7 @@ namespace Shine
     /// <summary>
     /// Azure OpenAI のチャットモデルを処理するクラス
     /// </summary>
-    public class O1AzureChatModelProcessor : IChatModelProcessor
+    public class O3AzureChatModelProcessor : IChatModelProcessor
     {
         private readonly ChatClient _chatClient;
 
@@ -15,7 +14,7 @@ namespace Shine
         /// Azure OpenAI のチャットモデルを処理するクラスのコンストラクタ
         /// </summary>
         /// <param name="chatClient"></param>
-        public O1AzureChatModelProcessor(ChatClient chatClient)
+        public O3AzureChatModelProcessor(ChatClient chatClient)
         {
             _chatClient = chatClient;
         }

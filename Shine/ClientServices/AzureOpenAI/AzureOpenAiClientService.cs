@@ -6,6 +6,9 @@ using OpenAI.Chat;
 
 namespace Shine
 {
+    /// <summary>
+    /// Azure OpenAI クライアントサービス
+    /// </summary>
     public class AzureOpenAiClientService : IChatClientService
     {
         private readonly AzureOpenAIClient _client;
@@ -13,6 +16,13 @@ namespace Shine
         private readonly float _temperature;
         private readonly IChatModelProcessor _processor;
 
+        /// <summary>
+        /// Azure OpenAI クライアントサービスのコンストラクタ
+        /// </summary>
+        /// <param name="endpoint"></param>
+        /// <param name="apiKey"></param>
+        /// <param name="deploymentName"></param>
+        /// <param name="temperature"></param>
         public AzureOpenAiClientService(string endpoint, string apiKey, string deploymentName, float temperature)
         {
             _client = new AzureOpenAIClient(new Uri(endpoint), new ApiKeyCredential(apiKey));
@@ -23,10 +33,16 @@ namespace Shine
             _processor = _deploymentName switch
             {
                 "o1-mini" => new O1AzureChatModelProcessor(chatClient),
+                "o3-mini" => new O3AzureChatModelProcessor(chatClient),
                 _ => new DefaultAzureChatModelProcessor(chatClient)
             };
         }
 
+        /// <summary>
+        /// Azure OpenAI にメッセージを送信し、応答を取得する
+        /// </summary>
+        /// <param name="userMessage"></param>
+        /// <returns></returns>
         public async Task<string> GetChatResponseAsync(string userMessage)
         {
             return await _processor.GetChatReplyAsync(userMessage);

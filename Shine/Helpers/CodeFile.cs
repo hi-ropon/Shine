@@ -14,6 +14,10 @@ namespace Shine
     /// </summary>
     public static class CodeFile
     {
+        /// <summary>
+        /// ソリューション内のコードファイルを取得する
+        /// </summary>
+        /// <returns></returns>
         public static List<string> GetCodeFilesInSolution()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -45,6 +49,11 @@ namespace Shine
             return codeFiles.ToList();
         }
 
+        /// <summary>
+        /// プロジェクト内のコードファイルを取得する
+        /// </summary>
+        /// <param name="project"></param>
+        /// <returns></returns>
         public static IEnumerable<string> GetCodeFilesFromProject(Project project)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -90,6 +99,11 @@ namespace Shine
             return result;
         }
 
+        /// <summary>
+        /// プロジェクトアイテム内のコードファイルを取得する
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns></returns>
         public static IEnumerable<string> GetCodeFilesFromProjectItem(ProjectItem item)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -143,6 +157,11 @@ namespace Shine
             return result;
         }
 
+        /// <summary>
+        /// 指定されたファイル名がコードファイルかどうかを判定する
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <returns></returns>
         public static bool IsCodeFile(string fileName)
         {
             if (string.IsNullOrEmpty(fileName)) return false;
@@ -151,6 +170,7 @@ namespace Shine
             {
                 string extension = Path.GetExtension(fileName)?.ToLowerInvariant();
                 return extension == ".cs" ||
+                       extension == "c" ||
                        extension == ".vb" ||
                        extension == ".cpp" ||
                        extension == ".h" ||

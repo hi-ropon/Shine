@@ -3,6 +3,9 @@ using OpenAI.Chat;
 
 namespace Shine
 {
+    /// <summary>
+    /// OpenAiClientService クラスは、OpenAI のチャットモデルを処理するクラスです
+    /// </summary>
     public class OpenAiClientService : IChatClientService
     {
         private readonly ChatClient _client;
@@ -11,6 +14,12 @@ namespace Shine
         private readonly string _reasoningEffort;
         private readonly IChatModelProcessor _processor;
 
+        /// <summary>
+        /// OpenAiClientService クラスのコンストラクタ
+        /// </summary>
+        /// <param name="apiKey"></param>
+        /// <param name="model"></param>
+        /// <param name="temperature"></param>
         public OpenAiClientService(string apiKey, string model, float temperature)
         {
             _client = new ChatClient(model, apiKey);
@@ -26,6 +35,11 @@ namespace Shine
             };
         }
 
+        /// <summary>
+        /// OpenAI にメッセージを送信し、応答を取得する
+        /// </summary>
+        /// <param name="userMessage"></param>
+        /// <returns></returns>
         public async Task<string> GetChatResponseAsync(string userMessage)
         {
             return await _processor.GetChatReplyAsync(userMessage);

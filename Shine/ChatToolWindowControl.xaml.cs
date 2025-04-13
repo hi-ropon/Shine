@@ -15,6 +15,9 @@ using System.IO;
 
 namespace Shine
 {
+    /// <summary>
+    /// ChatToolWindowControl.xaml の相互作用ロジック
+    /// </summary>
     public partial class ChatToolWindowControl : UserControl
     {
         private IChatClientService _chatClientService;

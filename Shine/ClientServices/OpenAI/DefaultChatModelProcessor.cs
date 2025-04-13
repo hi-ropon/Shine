@@ -6,12 +6,21 @@ using OpenAI.Chat;
 
 namespace Shine
 {
+    /// <summary>
+    /// DefaultChatModelProcessor クラスは、OpenAI のチャットモデルを処理するクラスです。
+    /// </summary>
     public class DefaultChatModelProcessor : IChatModelProcessor
     {
         private readonly ChatClient _client;
         private readonly string _model;
         private readonly float _temperature;
 
+        /// <summary>
+        /// DefaultChatModelProcessor クラスのコンストラクタ
+        /// </summary>
+        /// <param name="client"></param>
+        /// <param name="model"></param>
+        /// <param name="temperature"></param>
         public DefaultChatModelProcessor(ChatClient client, string model, float temperature)
         {
             _client = client;
@@ -19,6 +28,11 @@ namespace Shine
             _temperature = temperature;
         }
 
+        /// <summary>
+        /// OpenAI にメッセージを送信し、応答を取得する
+        /// </summary>
+        /// <param name="userMessage"></param>
+        /// <returns></returns>
         public async Task<string> GetChatReplyAsync(string userMessage)
         {
             string json = $@"
@@ -50,6 +64,11 @@ namespace Shine
             return message;
         }
 
+        /// <summary>
+        /// JSON 文字列をエスケープする
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
         private static string EscapeJson(string input)
         {
             return JsonSerializer.Serialize(input).Trim('\"');
