@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.ML.Tokenizers;
 using System.IO;
+using Microsoft.Web.WebView2.Core;
 
 namespace Shine
 {
@@ -77,20 +79,76 @@ namespace Shine
         }
 
         /// <summary>
-        /// WebView2 の初期化を行います
+        /// WebView2 の初期化をリトライ機能付きで実行します
+        /// </summary>
+        /// <param name="webView">対象のWebView2コントロール</param>
+        /// <param name="userDataFolder">ユーザーデータの格納先パス</param>
+        /// <param name="maxRetries">最大リトライ回数</param>
+        /// <returns>初期化成功ならtrue、失敗ならfalse</returns>
+        private async Task<bool> InitializeWebView2WithRetryAsync(Microsoft.Web.WebView2.Wpf.WebView2 webView, string userDataFolder, int maxRetries = 3)
+        {
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    // ユーザーデータフォルダが存在しない場合は作成
+                    if (!Directory.Exists(userDataFolder))
+                    {
+                        Directory.CreateDirectory(userDataFolder);
+                    }
+                    Debug.WriteLine($"Attempt {attempt}: ユーザーデータフォルダ '{userDataFolder}' を使用してWebView2環境を生成します。");
+
+                    var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
+                    await webView.EnsureCoreWebView2Async(env);
+                    Debug.WriteLine("WebView2の初期化に成功しました。");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Attempt {attempt}: WebView2の初期化に失敗しました。エラー内容：{ex.Message}");
+                    // エラーがユーザーデータフォルダの不整合やロックが原因と考えられる場合、フォルダの削除を試みる
+                    if (attempt < maxRetries)
+                    {
+                        try
+                        {
+                            if (Directory.Exists(userDataFolder))
+                            {
+                                Debug.WriteLine("ユーザーデータフォルダの状態をリセットするため、フォルダを削除します。");
+                                Directory.Delete(userDataFolder, true);
+                            }
+                        }
+                        catch (Exception dirEx)
+                        {
+                            Debug.WriteLine($"Attempt {attempt}: ユーザーデータフォルダの削除に失敗しました。エラー内容：{dirEx.Message}");
+                        }
+                        await Task.Delay(1000);
+                    }
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// WebView2 の初期化処理を実施します。リトライ機能付きの初期化を行い、初期化失敗時はユーザーへ通知します。
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private async void ChatToolWindowControl_Loaded(object sender, RoutedEventArgs e)
         {
+            // WebView2が未初期化の場合にリトライ付き初期化を行う
             if (ChatHistoryWebView.CoreWebView2 == null)
             {
-                string userDataFolder = System.IO.Path.Combine(
+                string userDataFolder = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "Shine", "WebView2");
 
-                var env = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, userDataFolder);
-                await ChatHistoryWebView.EnsureCoreWebView2Async(env);
+                bool initialized = await InitializeWebView2WithRetryAsync(ChatHistoryWebView, userDataFolder, maxRetries: 3);
+                if (!initialized)
+                {
+                    Debug.WriteLine("複数回の初期化試行にも関わらずWebView2の初期化に失敗しました。");
+                    MessageBox.Show("WebView2 の初期化に失敗しました。Visual Studio を再起動するか、システム環境をご確認ください。",
+                                    "初期化エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
 
             if (_chatHistoryManager == null)
@@ -275,7 +333,7 @@ namespace Shine
             {
                 errorOccurred = true;
                 reply = $"エラーが発生しました:\n{ex.Message}";
-                System.Diagnostics.Debug.WriteLine($"AI リクエストまたは処理中にエラーが発生しました: {ex}");
+                Debug.WriteLine($"AI リクエストまたは処理中にエラーが発生しました: {ex}");
             }
             finally
             {
@@ -329,7 +387,7 @@ namespace Shine
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"IncludeOpenFilesCheckBox の状態取得中にエラーが発生しました: {ex}");
+                Debug.WriteLine($"IncludeOpenFilesCheckBox の状態取得中にエラーが発生しました: {ex}");
             }
 
             if (includeOpenFiles)
@@ -345,7 +403,7 @@ namespace Shine
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"オープンドキュメントの内容取得中にエラーが発生しました: {ex}");
+                    Debug.WriteLine($"オープンドキュメントの内容取得中にエラーが発生しました: {ex}");
                 }
 
                 if (!string.IsNullOrEmpty(openFilesContent))
@@ -373,19 +431,19 @@ namespace Shine
             {
                 if (dte?.Documents == null)
                 {
-                    System.Diagnostics.Debug.WriteLine("GetOpenDocumentsContent で DTE または Documents コレクションが null です。");
+                    Debug.WriteLine("GetOpenDocumentsContent で DTE または Documents コレクションが null です。");
                     return "";
                 }
 
                 foreach (Document doc in dte.Documents)
                 {
-                    if (doc != null && !string.IsNullOrEmpty(doc.FullName) && doc.Saved && System.IO.File.Exists(doc.FullName))
+                    if (doc != null && !string.IsNullOrEmpty(doc.FullName) && doc.Saved && File.Exists(doc.FullName))
                     {
-                        string fileName = System.IO.Path.GetFileName(doc.FullName);
+                        string fileName = Path.GetFileName(doc.FullName);
                         string content = "";
                         try
                         {
-                            content = System.IO.File.ReadAllText(doc.FullName);
+                            content = File.ReadAllText(doc.FullName);
                             sb.AppendLine($"--- {fileName} の内容開始 ---");
                             sb.AppendLine(content);
                             sb.AppendLine($"--- {fileName} の内容終了 ---");
@@ -393,18 +451,18 @@ namespace Shine
                         catch (Exception ex)
                         {
                             sb.AppendLine($"--- {fileName} (読み込みエラー) ---");
-                            System.Diagnostics.Debug.WriteLine($"オープンドキュメント '{doc.FullName}' の読み込み中にエラーが発生しました: {ex}");
+                            Debug.WriteLine($"オープンドキュメント '{doc.FullName}' の読み込み中にエラーが発生しました: {ex}");
                         }
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine($"Skipping document '{doc?.Name}' (条件に合致しません)。");
+                        Debug.WriteLine($"Skipping document '{doc?.Name}' (条件に合致しません)。");
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GetOpenDocumentsContent 内でエラーが発生しました: {ex}");
+                Debug.WriteLine($"GetOpenDocumentsContent 内でエラーが発生しました: {ex}");
             }
 
             return sb.ToString();
@@ -466,7 +524,7 @@ namespace Shine
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error getting DialogPage in EnableButton: {ex}");
+                Debug.WriteLine($"Error getting DialogPage in EnableButton: {ex}");
                 return;
             }
 
@@ -508,7 +566,7 @@ namespace Shine
                     MessageBox.Show("ソリューションが開かれていません。");
                     return;
                 }
-                solutionPath = System.IO.Path.GetDirectoryName(dte.Solution.FullName);
+                solutionPath = Path.GetDirectoryName(dte.Solution.FullName);
             }
             catch (Exception ex)
             {
