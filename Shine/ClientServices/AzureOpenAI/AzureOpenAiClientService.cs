@@ -33,6 +33,7 @@ namespace Shine
             _processor = _deploymentName switch
             {
                 "o1-mini" => new O1AzureChatModelProcessor(chatClient),
+                "o3-mini" => new O3AzureChatModelProcessor(chatClient),
                 _ => new DefaultAzureChatModelProcessor(chatClient)
             };
         }
