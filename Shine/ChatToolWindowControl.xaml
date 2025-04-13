@@ -15,7 +15,6 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="5">
-                            <!-- 角丸の値を調整 -->
                             <ContentPresenter HorizontalAlignment="Center"
                                               VerticalAlignment="Center" />
                         </Border>
@@ -52,18 +51,17 @@
 
         <!-- 入力リッチテキストボックス -->
         <Grid Grid.Row="2">
-            <RichTextBox x:Name="InputRichTextBox"
-                         Margin="5"
-                         Height="80"
-                         TextChanged="InputRichTextBox_TextChanged"
-                         KeyDown="InputRichTextBox_KeyDown">
-                <RichTextBox.Resources>
-                    <Style TargetType="Paragraph">
-                        <Setter Property="Margin" Value="0" />
-                        <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
-                    </Style>
-                </RichTextBox.Resources>
-            </RichTextBox>
+                <RichTextBox x:Name="InputRichTextBox"
+                             Height="80"
+                             TextChanged="InputRichTextBox_TextChanged"
+                             KeyDown="InputRichTextBox_KeyDown">
+                    <RichTextBox.Resources>
+                        <Style TargetType="Paragraph">
+                            <Setter Property="Margin" Value="0" />
+                            <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
+                        </Style>
+                    </RichTextBox.Resources>
+                </RichTextBox>
             <!-- 候補表示用ポップアップ -->
             <Popup x:Name="MentionPopup"
                    Placement="Top"
@@ -98,9 +96,10 @@
                           Content="エディタで開いている全てのプログラムを含む"
                           VerticalAlignment="Center" />
                 <TextBlock Grid.Row="1"
-                           Text="AIの提案は不正確である可能性があります"
-                           FontSize="12"
-                           Margin="5,2,0,0"/>
+                          Text="AIの提案は不正確である可能性があります"
+                          FontSize="12"
+                          Margin="5,2,0,0"
+                          Foreground="{Binding Foreground, ElementName=IncludeOpenFilesCheckBox}"/>
             </Grid>
             <!-- 右側: トークン数表示エリア -->
             <StackPanel Grid.Column="1" Orientation="Vertical" Margin="5,0,5,0">
@@ -154,13 +153,13 @@
                         Style="{StaticResource RoundedButtonStyle}"
                         Margin="5"
                         Width="30"
-                        Height="25"
+                        Height="30"
                         Click="ImageInputButton_Click"
                         Background="White"
                         ToolTip="画像を入力します"
                         BorderThickness="0"
                         BorderBrush="Transparent">
-                    <Image Source="Resources/IconImageInput.png" Stretch="Uniform"/>
+                    <Image Source="Resources/IconImageInput.png" Stretch="Uniform" Width="18" Height="18"/>
                 </Button>
 
                 <!-- 要約ボタン -->
@@ -168,13 +167,13 @@
                         Style="{StaticResource RoundedButtonStyle}"
                         Margin="5"
                         Width="30"
-                        Height="25"
+                        Height="30"
                         Click="SummarizeDiffButton_Click"
                         Background="White"
                         ToolTip="コミットメッセージを生成します（不正確である可能性があります）"
                         BorderThickness="0"
                         BorderBrush="Transparent">
-                    <Image Source="Resources/IconSummary.png" Stretch="Uniform"/>
+                    <Image Source="Resources/IconSummary.png" Stretch="Uniform" Width="18" Height="18"/>
                 </Button>
 
                 <!-- クリアボタン -->
@@ -182,13 +181,13 @@
                         Style="{StaticResource RoundedButtonStyle}"
                         Margin="5"
                         Width="30"
-                        Height="25"
+                        Height="30"
                         Click="ClearButton_Click"
                         Background="White"
                         ToolTip="チャットをクリアします"
                         BorderThickness="0"
                         BorderBrush="Transparent">
-                    <Image Source="Resources/IconClear.png" Stretch="Uniform"/>
+                    <Image Source="Resources/IconClear.png" Stretch="Uniform" Width="18" Height="18"/>
                 </Button>
 
                 <!-- 送信ボタン -->
@@ -202,7 +201,7 @@
                         ToolTip="質問を送信します"
                         BorderThickness="0"
                         BorderBrush="Transparent">
-                    <Image Source="Resources/IconSend.png" Stretch="Uniform"/>
+                    <Image Source="Resources/IconSend.png" Stretch="Uniform" Width="25" Height="25"/>
                 </Button>
             </StackPanel>
         </Grid>

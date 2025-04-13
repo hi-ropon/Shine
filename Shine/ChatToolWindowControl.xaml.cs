@@ -49,6 +49,7 @@ namespace Shine
 
 #if !DEBUG
             EnableButton.Visibility = Visibility.Collapsed;
+            ImageInputButton.Visibility = Visibility.Collapsed;
 #endif
 
             VSColorTheme.ThemeChanged += OnThemeChanged;
