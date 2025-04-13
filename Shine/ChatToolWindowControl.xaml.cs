@@ -650,6 +650,17 @@ namespace Shine
             _chatHistoryManager.AddChatMessage("Assistant", diffSummary);
         }
 
+
+        /// <summary>
+        /// 画像入力ボタンがクリックされた際の処理を行います
+        /// </summary>
+        private void ImageInputButton_Click(object sender, RoutedEventArgs e)
+        {
+            // ここに画像入力のロジックを実装します。
+            // サンプルとして、メッセージボックスを表示します。
+            MessageBox.Show("画像入力機能はまだ実装されていません。", "画像入力", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
         /// <summary>
         /// ツールウィンドウがアンロードされた際の処理を行います
         /// </summary>
