@@ -167,6 +167,7 @@
     <Resource Include="Resources\IconSend.png" />
     <Resource Include="Resources\IconClear.png" />
     <Resource Include="Resources\IconSummary.png" />
+    <Resource Include="Resources\IconImageInput.png" />
     <Content Include="System.IO.Pipelines.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
