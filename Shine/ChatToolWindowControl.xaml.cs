@@ -289,6 +289,19 @@ namespace Shine
                 return;
             }
 
+#if DEBUG
+            // デバッグビルド時は chatClient と内部の _client の情報を ChatHistory に表示する
+            StringBuilder debugInfo = new StringBuilder();
+            debugInfo.AppendLine("【Debug Info】");
+            debugInfo.AppendLine("chatClient: " + _chatClientService.ToString());
+            // AzureOpenAiClientService であれば、内部の _client 情報を表示
+            if (_chatClientService is AzureOpenAiClientService azureService)
+            {
+                debugInfo.AppendLine("_client: " + _chatClientService.ToString());
+            }
+            _chatHistoryManager.AddChatMessage("System", debugInfo.ToString());
+#endif
+
             ThemeColor();
 
             string userInput = GetRichTextWithMentions(InputRichTextBox);
