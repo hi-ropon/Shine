@@ -372,7 +372,7 @@ namespace Shine
             StringBuilder processedInput = new StringBuilder(userInput);
 
             // @ファイル名 処理
-            var matches = Regex.Matches(userInput, @"@([\w\.\-]+)");
+            var matches = Regex.Matches(userInput, @"@([A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+)");
             foreach (System.Text.RegularExpressions.Match match in matches)
             {
                 string fileName = match.Groups[1].Value;
