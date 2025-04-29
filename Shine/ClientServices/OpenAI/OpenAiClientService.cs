@@ -31,6 +31,7 @@ namespace Shine
             {
                 "o1-mini" => new O1ChatModelProcessor(_client, _model),
                 "o3-mini" => new O3ChatModelProcessor(_client, _model, _reasoningEffort),
+                "o4-mini" => new O4ChatModelProcessor(_client, _model, _reasoningEffort),
                 _ => new DefaultChatModelProcessor(_client, _model, _temperature)
             };
         }

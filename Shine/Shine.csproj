@@ -58,6 +58,7 @@
     <Compile Include="ClientServices\AzureOpenAI\O1AzureChatModelProcessor.cs" />
     <Compile Include="ClientServices\OpenAI\DefaultChatModelProcessor.cs" />
     <Compile Include="ClientServices\OpenAI\O1ChatModelProcessor.cs" />
+    <Compile Include="ClientServices\OpenAI\O4ChatModelProcessor.cs" />
     <Compile Include="ClientServices\OpenAI\O3ChatModelProcessor.cs" />
     <Compile Include="GitServices\GitDiffHelper.cs" />
     <Compile Include="GitServices\GitDiffSummarizer.cs" />
