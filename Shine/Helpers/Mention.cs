@@ -121,7 +121,9 @@ namespace Shine
 
                         if (token.IsCancellationRequested) return;
 
-                        bool shouldScanSolution = string.IsNullOrEmpty(query) || _codeFileList == null;
+                        bool shouldScanSolution = _codeFileList == null ||
+                                                  !_isMentionMode ||
+                                                  (_codeFileList.Count == 0);
 
                         if (shouldScanSolution)
                         {
@@ -288,6 +290,7 @@ namespace Shine
                     var inlineUI = new InlineUIContainer(mentionElement, mentionStart);
                     // 挿入後、キャレットを移動
                     _inputRichTextBox.CaretPosition = inlineUI.ElementEnd;
+                    _inputRichTextBox.CaretPosition.InsertTextInRun(" ");
                 }
             }
             finally

@@ -46,6 +46,7 @@ namespace Shine
                         listBox.Items.Add("gpt-4o");
                         listBox.Items.Add("o1-mini");
                         listBox.Items.Add("o3-mini");
+                        listBox.Items.Add("o4-mini");
                     }
                     else if (options.Provider == OpenAiProvider.AzureOpenAI)
                     {
@@ -53,6 +54,7 @@ namespace Shine
                         listBox.Items.Add("gpt-4o-mini");
                         listBox.Items.Add("gpt-4o");
                         listBox.Items.Add("o1-mini");
+                        listBox.Items.Add("o3-mini");
                     }
                     listBox.SelectedItem = value;
                     listBox.SelectedIndexChanged += (s, e) =>

@@ -1,6 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using OpenAI.Chat;
-
 namespace Shine
 {
     /// <summary>
@@ -9,7 +9,7 @@ namespace Shine
     public class O3AzureChatModelProcessor : IChatModelProcessor
     {
         private readonly ChatClient _chatClient;
-
+        private readonly ChatCompletionOptions _completionOptions;
         /// <summary>
         /// Azure OpenAI のチャットモデルを処理するクラスのコンストラクタ
         /// </summary>
@@ -17,8 +17,11 @@ namespace Shine
         public O3AzureChatModelProcessor(ChatClient chatClient)
         {
             _chatClient = chatClient;
+            _completionOptions = new ChatCompletionOptions()
+            {
+                ReasoningEffortLevel = "high",
+            };
         }
-
         /// <summary>
         /// Azure OpenAI にメッセージを送信し、応答を取得する
         /// </summary>
@@ -26,7 +29,18 @@ namespace Shine
         /// <returns></returns>
         public async Task<string> GetChatReplyAsync(string userMessage)
         {
-            var completion = await _chatClient.CompleteChatAsync(new UserChatMessage(userMessage));
+            string systemMessage = "#役割\n　あなたは優秀なプログラミング支援 AI です。\n" +
+                                    "プログラム単位でコードブロックで出力し、日本語で回答してください。\n" +
+                                    "各プログラムは先頭と末尾を、\n" +
+                                    "```csharp\n" +
+                                    "```\n" +
+                                    "のように各言語のコードフェンスで囲ってください。";
+            List<ChatMessage> message = new List<ChatMessage>()
+            {
+                new SystemChatMessage(systemMessage),
+                new UserChatMessage(userMessage),
+            };
+            var completion = await _chatClient.CompleteChatAsync(message, _completionOptions);
             return completion.Value.Content[0].Text;
         }
     }
