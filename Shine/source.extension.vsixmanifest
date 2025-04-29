@@ -4,7 +4,7 @@
         <Identity Id="Shine.60a34bcc-2657-453a-b46d-e74573ac6671" Version="0.1" Language="ja-JP" Publisher="hi-ropon" />
         <DisplayName>Shine</DisplayName>
         <Description xml:space="preserve">コードアシスタントツール</Description>
-        <Icon>Resources\Shine.png</Icon>
+        <Icon>Resources\shine.png</Icon>
     </Metadata>
     <Installation>
         <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 18.0)">

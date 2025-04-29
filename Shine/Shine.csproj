@@ -157,7 +157,10 @@
     <EmbeddedResource Include="Resources\icon.png" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resources\Shine.png" />
+    <Content Include="Resources\shine.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Microsoft.Bcl.AsyncInterfaces.dll">
