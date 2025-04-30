@@ -1,13 +1,28 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media;
 using Microsoft.VisualStudio.PlatformUI;
-using LangChain.Memory;
 
 namespace Shine
 {
+    /// <summary>
+    /// 会話メッセージを表すモデル
+    /// </summary>
+    public class ChatMessage
+    {
+        public string Role { get; }
+        public string Content { get; }
+
+        public ChatMessage(string role, string content)
+        {
+            Role = role;
+            Content = content;
+        }
+    }
+
     /// <summary>
     /// WebView2 を利用してチャット履歴を HTML 表示するためのファサードクラス
     /// </summary>
@@ -17,16 +32,16 @@ namespace Shine
         private ChatHistoryDocument _document;
         private Brush _foregroundBrush;
         private string _assistantIconBase64;
-        private ConversationBufferMemory _conversationMemory;
+
+        // 独自実装の会話メモリ
+        private readonly List<ChatMessage> _conversationMemory = new List<ChatMessage>();
+
         private int _historyLimit = 5;
-        private readonly IThemeProvider _themeProvider;
+        private IThemeProvider _themeProvider;
 
         /// <summary>
         /// コンストラクタ
         /// </summary>
-        /// <param name="chatHistoryWebView"></param>
-        /// <param name="foregroundBrush"></param>
-        /// <exception cref="ArgumentNullException"></exception>
         public ChatHistory(IWebView2Wrapper chatHistoryWebView, Brush foregroundBrush)
         {
             _chatHistoryWebView = chatHistoryWebView ?? throw new ArgumentNullException(nameof(chatHistoryWebView));
@@ -35,29 +50,28 @@ namespace Shine
             _assistantIconBase64 = ResourceHelper.LoadResourceAsBase64("Shine.Resources.icon.png", typeof(ChatHistory));
             _document = new ChatHistoryDocument(_foregroundBrush, _assistantIconBase64);
 
-            _conversationMemory = new ConversationBufferMemory();
             // 初期状態の HTML を WebView2 に読み込む
             _chatHistoryWebView.NavigateToString(_document.GetHtml());
         }
 
         /// <summary>
-        /// コンストラクタ（テーマプロバイダを利用する場合）
+        /// コンストラクタ（テスト用: ChatHistoryDocument と IThemeProvider を注入可能）
         /// </summary>
-        /// <param name="chatHistoryWebView"></param>
-        /// <param name="foregroundBrush"></param>
-        /// <param name="document"></param>
-        /// <param name="themeProvider"></param>
-        /// <exception cref="ArgumentNullException"></exception>
-        public ChatHistory(IWebView2Wrapper chatHistoryWebView, Brush foregroundBrush, ChatHistoryDocument document, IThemeProvider themeProvider)
+        public ChatHistory(
+            IWebView2Wrapper chatHistoryWebView,
+            Brush foregroundBrush,
+            ChatHistoryDocument document,
+            IThemeProvider themeProvider)
         {
             _chatHistoryWebView = chatHistoryWebView ?? throw new ArgumentNullException(nameof(chatHistoryWebView));
             _foregroundBrush = foregroundBrush ?? throw new ArgumentNullException(nameof(foregroundBrush));
             _document = document ?? throw new ArgumentNullException(nameof(document));
             _themeProvider = themeProvider ?? throw new ArgumentNullException(nameof(themeProvider));
 
-            // テスト用の場合、_assistantIconBase64 は document 側の値を利用
+            // テスト用ではアイコンは外部から注入されるので空文字
             _assistantIconBase64 = string.Empty;
-            _conversationMemory = new ConversationBufferMemory();
+
+            // 初期状態の HTML を WebView2 に読み込む
             _chatHistoryWebView.NavigateToString(_document.GetHtml());
         }
 
@@ -66,93 +80,59 @@ namespace Shine
         /// </summary>
         public void AddChatMessage(string senderName, string message)
         {
-            string messageBlock = ChatMessageFormatter.FormatMessage(senderName, message, _document.Pipeline, _assistantIconBase64);
+            // HTML 表示部分
+            string messageBlock = ChatMessageFormatter.FormatMessage(
+                senderName, message, _document.Pipeline, _assistantIconBase64);
             _document.AppendChatMessage(messageBlock);
-
-            string script = "<script>addCopyButtons(); scrollToBottom();</script>";
-            _document.AppendScript(script);
-
+            _document.AppendScript("<script>addCopyButtons(); scrollToBottom();</script>");
             _chatHistoryWebView.NavigateToString(_document.GetHtml());
+
+            // メモリにも追加
+            AddConversationMemory(senderName, message);
+            AdjustConversationMemory();
         }
 
         /// <summary>
-        /// チャット履歴を追加する
+        /// 会話メモリにメッセージを追加する
         /// </summary>
         public void AddConversationMemory(string senderName, string message)
         {
-            if (senderName.Equals("User", StringComparison.OrdinalIgnoreCase))
-            {
-                _conversationMemory.ChatHistory.AddUserMessage(message);
-            }
-            else if (senderName.Equals("Assistant", StringComparison.OrdinalIgnoreCase))
-            {
-                _conversationMemory.ChatHistory.AddAiMessage(message);
-            }
-            else
-            {
-                _conversationMemory.ChatHistory.AddAiMessage(message);
-            }
+            string role = senderName.Equals("User", StringComparison.OrdinalIgnoreCase) ? "Human"
+                        : senderName.Equals("Assistant", StringComparison.OrdinalIgnoreCase) ? "Ai"
+                        : "Ai";
+            _conversationMemory.Add(new ChatMessage(role, message));
         }
 
         /// <summary>
-        /// チャット履歴の量を調整する
+        /// 会話メモリの件数を制限する
         /// </summary>
         public void AdjustConversationMemory()
         {
-            if (_historyLimit == 0)
+            int humanCount = _conversationMemory.Count(m => m.Role == "Human");
+            if (humanCount <= _historyLimit) return;
+
+            int removeCount = humanCount - _historyLimit;
+            int humanSeen = 0;
+            int idxToKeep = 0;
+
+            for (int i = 0; i < _conversationMemory.Count; i++)
             {
-                _conversationMemory.Clear();
-                return;
-            }
-
-            var messages = _conversationMemory.ChatHistory.Messages.ToList();
-            int humanMessageCount = messages.Count(m => m.Role.ToString() == "Human");
-
-            if (humanMessageCount > _historyLimit)
-            {
-                int excessPairs = humanMessageCount - _historyLimit;
-                int messagesToSkip = 0;
-                int humanCount = 0;
-
-                for (int i = 0; i < messages.Count; i++)
+                if (_conversationMemory[i].Role == "Human")
                 {
-                    if (messages[i].Role.ToString() == "Human")
+                    humanSeen++;
+                    if (humanSeen > removeCount)
                     {
-                        humanCount++;
-                        if (humanCount <= excessPairs)
-                        {
-                            messagesToSkip = i + 2;
-                            if (i + 1 >= messages.Count || messages[i + 1].Role.ToString() != "Ai")
-                            {
-                                messagesToSkip = i + 1;
-                            }
-                        }
-                        else
-                        {
-                            break;
-                        }
+                        idxToKeep = i;
+                        break;
                     }
                 }
-
-                var newMemory = new ConversationBufferMemory();
-                for (int i = messagesToSkip; i < messages.Count; i++)
-                {
-                    if (messages[i].Role.ToString() == "Human")
-                    {
-                        newMemory.ChatHistory.AddUserMessage(messages[i].Content);
-                    }
-                    else if (messages[i].Role.ToString() == "Ai")
-                    {
-                        newMemory.ChatHistory.AddAiMessage(messages[i].Content);
-                    }
-                }
-
-                _conversationMemory = newMemory;
             }
+
+            _conversationMemory.RemoveRange(0, idxToKeep);
         }
 
         /// <summary>
-        /// チャット履歴（および会話メモリ）をクリアする
+        /// 全メモリをクリアする
         /// </summary>
         public void ClearHistory()
         {
@@ -167,46 +147,47 @@ namespace Shine
         public void SetHistoryLimit(int limit)
         {
             _document.MaxChatHistoryCount = limit;
-            _historyLimit = limit / 2;
+            _historyLimit = Math.Max(0, limit / 2);
             AdjustConversationMemory();
         }
 
         /// <summary>
-        /// 会話履歴を整形して返すメソッド
+        /// 会話履歴を整形して返す（AI に渡す用）
         /// </summary>
         public string GetConversationHistory()
         {
-            StringBuilder sb = new StringBuilder();
-            foreach (var msg in _conversationMemory.ChatHistory.Messages)
+            var sb = new StringBuilder();
+            foreach (var msg in _conversationMemory)
             {
-                sb.AppendLine($"{msg.GetType().Name}: {msg}");
+                sb.AppendLine($"{msg.Role}: {msg.Content}");
             }
             return sb.ToString();
         }
 
         /// <summary>
-        /// テーマ変更時に新しい ForegroundBrush を反映する（body の文字色を更新）
+        /// テーマ変更時にテキスト色を更新
         /// </summary>
-        public async Task UpdateForegroundColorAsync(Brush newForegroundBrush)
+        public async Task UpdateForegroundColorAsync(Brush newBrush)
         {
-            if (newForegroundBrush == null) return;
-            _foregroundBrush = newForegroundBrush;
-            string newColorHex = BrushHelper.ConvertBrushToHex(newForegroundBrush);
-            string script = $"document.body.style.color = '{newColorHex}';";
-            await _chatHistoryWebView.ExecuteScriptAsync(script);
+            if (newBrush == null) return;
+            _foregroundBrush = newBrush;
+            string hex = BrushHelper.ConvertBrushToHex(newBrush);
+            await _chatHistoryWebView.ExecuteScriptAsync(
+                $"document.body.style.color = '{hex}';");
         }
 
         /// <summary>
-        /// VS の背景色を取得して、WebView2 の背景色を更新する
+        /// VS テーマ背景色を WebView2 に反映
         /// </summary>
         public async Task UpdateBackgroundColorAsync()
         {
-            var bgDrawingColor = VSColorTheme.GetThemedColor(EnvironmentColors.ToolWindowBackgroundColorKey);
-            var themedBgColor = System.Windows.Media.Color.FromArgb(bgDrawingColor.A, bgDrawingColor.R, bgDrawingColor.G, bgDrawingColor.B);
-            string backgroundHex = $"#{themedBgColor.R:X2}{themedBgColor.G:X2}{themedBgColor.B:X2}";
-
-            string script = $"document.body.style.backgroundColor = '{backgroundHex}';";
-            await _chatHistoryWebView.ExecuteScriptAsync(script);
+            var bg = VSColorTheme.GetThemedColor(
+                EnvironmentColors.ToolWindowBackgroundColorKey);
+            var color = System.Windows.Media.Color.FromArgb(
+                bg.A, bg.R, bg.G, bg.B);
+            string hex = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+            await _chatHistoryWebView.ExecuteScriptAsync(
+                $"document.body.style.backgroundColor = '{hex}';");
         }
     }
 }
