@@ -129,7 +129,9 @@ namespace Shine
                         {
                             System.Diagnostics.Debug.WriteLine("Scanning solution for files...");
                             _codeFileList = CodeFile.GetCodeFilesInSolution();
-                            System.Diagnostics.Debug.WriteLine($"Found {_codeFileList?.Count ?? 0} files.");
+                            // 走査結果をアルファベット順にソートしてキャッシュ
+                            _codeFileList.Sort(StringComparer.OrdinalIgnoreCase);
+                            System.Diagnostics.Debug.WriteLine($"Found {_codeFileList.Count} files.");
                         }
 
                         FilterAndShowMentionList(query);
@@ -155,9 +157,8 @@ namespace Shine
         }
 
         /// <summary>
-        /// メンション候補リストをフィルタリングし、該当する候補があればポップアップとして表示します。
+        /// メンション候補リストをフィルタ＆表示（アルファベット順ソート付き）
         /// </summary>
-        /// <param name="query">メンションキー以降の検索クエリ</param>
         private void FilterAndShowMentionList(string query)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -168,9 +169,14 @@ namespace Shine
                 return;
             }
 
+            // クエリに応じてフィルタ
             var filteredList = string.IsNullOrWhiteSpace(query)
-                ? _codeFileList
-                : _codeFileList.FindAll(f => f != null && f.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0);
+                ? new List<string>(_codeFileList)
+                : _codeFileList.FindAll(f => f != null &&
+                                             f.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0);
+
+            // ここでアルファベット順にソート
+            filteredList.Sort(StringComparer.OrdinalIgnoreCase);
 
             _mentionListBox.ItemsSource = filteredList;
 
