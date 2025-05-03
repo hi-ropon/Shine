@@ -36,7 +36,7 @@ namespace Shine
         [DisplayName("モデル名")]
         [Description("利用するモデル名を選択してください。")]
         [Editor(typeof(ModelNameEditor), typeof(UITypeEditor))]
-        public string OpenAIModelName { get; set; } = "gpt-4o-mini";
+        public string OpenAIModelName { get; set; } = "o4-mini";
 #else
         // リリースビルド時は非表示にし、固定で AzureOpenAI を利用
         [Browsable(false)]
@@ -88,6 +88,12 @@ namespace Shine
             get { return _chatHistoryCount; }
             set { _chatHistoryCount = Math.Max(0, Math.Min(10, value)); }
         }
+
+        [Category("General")]
+        [DisplayName("Enable Inline Suggestion")]
+        [Description("コード入力中にゴーストテキストで AI サジェスチョンを表示します")]
+        public bool EnableInlineSuggestion { get; set; } = true;
+
 
         /// <summary>
         /// オプションの適用時に呼び出されるメソッド

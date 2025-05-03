@@ -5,7 +5,7 @@
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
   </PropertyGroup>
   <PropertyGroup>
-    <LangVersion>8.0</LangVersion>
+    <LangVersion>9.0</LangVersion>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -26,9 +26,9 @@
     <IncludeDebugSymbolsInLocalVSIXDeployment>false</IncludeDebugSymbolsInLocalVSIXDeployment>
     <CopyBuildOutputToOutputDirectory>true</CopyBuildOutputToOutputDirectory>
     <CopyOutputSymbolsToOutputDirectory>true</CopyOutputSymbolsToOutputDirectory>
-    <StartAction>Program</StartAction>
+    <!--<StartAction>Program</StartAction>
     <StartProgram Condition="'$(DevEnvDir)' != ''">$(DevEnvDir)devenv.exe</StartProgram>
-    <StartArguments>/rootsuffix Exp</StartArguments>
+    <StartArguments>/rootsuffix Exp</StartArguments> -->
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -38,6 +38,9 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <StartAction>Program</StartAction>
+    <StartProgram>$(DevEnvDir)devenv.exe</StartProgram>
+    <StartArguments>/rootsuffix Exp</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -46,6 +49,9 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <StartAction>Program</StartAction>
+    <StartProgram>$(DevEnvDir)devenv.exe</StartProgram>
+    <StartArguments>/rootsuffix Exp</StartArguments>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="AiAssistantOptions.cs">
@@ -56,6 +62,7 @@
     <Compile Include="ClientServices\AzureOpenAI\DefaultAzureChatModelProcessor.cs" />
     <Compile Include="ClientServices\AzureOpenAI\O3AzureChatModelProcessor.cs" />
     <Compile Include="ClientServices\AzureOpenAI\O1AzureChatModelProcessor.cs" />
+    <Compile Include="ClientServices\ChatClientServiceFactory.cs" />
     <Compile Include="ClientServices\OpenAI\DefaultChatModelProcessor.cs" />
     <Compile Include="ClientServices\OpenAI\O1ChatModelProcessor.cs" />
     <Compile Include="ClientServices\OpenAI\O4ChatModelProcessor.cs" />
@@ -85,6 +92,11 @@
     <Compile Include="ClientServices\OpenAI\OpenAiClientService.cs" />
     <Compile Include="ShinePackage.cs" />
     <Compile Include="ShowAiChatCommand.cs" />
+    <Compile Include="Suggestion\CodeSuggestionListener.cs" />
+    <Compile Include="Suggestion\InlineSuggestionCommandFilter.cs" />
+    <Compile Include="Suggestion\InlineSuggestionManager.cs" />
+    <Compile Include="Suggestion\Proposals.cs" />
+    <Compile Include="Suggestion\Suggestions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="source.extension.vsixmanifest">
@@ -92,6 +104,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
