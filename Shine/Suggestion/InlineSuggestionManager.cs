@@ -1,7 +1,6 @@
 ﻿// ファイル名: InlineSuggestionManager.cs
 using System;
 using System.Linq;
-using System.Runtime.Remoting.Contexts;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -14,19 +13,20 @@ using Microsoft.VisualStudio.Text.Editor;
 namespace Shine.Suggestion
 {
     /// <summary>
-    /// ① Enter で AI へ補完要求
-    /// ② Tab で VS がコミットしなければ自前でフォールバック挿入
-    ///    ‑ キャレット行のインデントを維持して貼り付け
+    /// ① Enter で AI へ補完要求  
+    /// ② Tab フォールバック時はキャレット行のインデントを保ったまま貼り付け
     /// </summary>
     internal sealed class InlineSuggestionManager : IDisposable
     {
         private readonly IWpfTextView _view;
         private readonly IChatClientService _chat;
         private readonly CancellationTokenSource _cts = new();
-        private static Guid _paneGuid = new Guid("D2E3747C-1234-ABCD-5678-0123456789AB");
 
-        private object? _currentSession;          // IntelliCode の SuggestionSession
-        private int? _commitOriginPos;         // Tab 押下時のキャレット位置
+        private static Guid _paneGuid =
+            new Guid("D2E3747C-1234-ABCD-5678-0123456789AB");
+
+        private object? _currentSession;
+        private int? _commitOriginPos;      // Tab 押下時の BufferPosition
 
         /* ───── プロパティ ───── */
         internal bool HasActiveSession => _currentSession != null;
@@ -38,18 +38,17 @@ namespace Shine.Suggestion
         {
             _view = view;
             _chat = chat;
-            // キャレットが動いたらフォールバック不要
-            _view.Caret.PositionChanged += (_, __) => _commitOriginPos = null;
+            _view.Caret.PositionChanged += (_, __) => _commitOriginPos = null;   // キャレット移動でフォールバック不要
         }
 
         /* =====================================================================
-                               Public helper from filters
+                                 フィルタ側から呼ばれるヘルパ
         =====================================================================*/
         internal void RememberCaret() => _commitOriginPos = _view.Caret.Position.BufferPosition;
         internal void SetCurrentSession(object s) => _currentSession = s;
 
         /* =====================================================================
-                                     Enter → AI へ問い合わせ
+                                   Enter → AI へ問い合わせ
         =====================================================================*/
         public async Task OnEnterAsync() => await RequestSuggestionAsync();
 
@@ -67,10 +66,7 @@ namespace Shine.Suggestion
                 reply = await _chat.GetChatResponseAsync(
 $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only code, no comment.\n\n#Context\n{ctx}");
             }
-            catch 
-            {
-                return;
-            }
+            catch { return; }
 
             string suggestion = PostProcess(reply, ctx);
 #if DEBUG
@@ -82,7 +78,7 @@ $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only
         }
 
         /* =====================================================================
-                                  フォールバック (Tab)
+                              Tab → VS がコミットしなければフォールバック
         =====================================================================*/
         internal void FallbackInsertIfNeeded()
         {
@@ -99,8 +95,17 @@ $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only
             var raw = LastProposalText;
             if (string.IsNullOrEmpty(raw)) { _commitOriginPos = null; return; }
 
-            string indent = GetIndentString(origin);
-            string fixedTxt = CleanAndReindent(raw, indent);
+            // ── ① 行頭～実インデント文字列
+            var snap = _view.TextSnapshot;
+            var line = snap.GetLineFromPosition(origin);
+            string realIndent = snap.GetText(line.Start.Position, origin - line.Start.Position);
+
+            // ── ② 仮想空白 (Tab で動いた分など) のスペースを生成
+            int virtualSpaces = _view.Caret.Position.VirtualSpaces;
+            string virtualIndent = new string(' ', virtualSpaces);
+
+            // ── ③ 提案テキストをインデント調整
+            string fixedTxt = ReindentWithCaretIndent(raw, realIndent, virtualIndent);
 
             using (var edit = _view.TextBuffer.CreateEdit())
             {
@@ -109,22 +114,14 @@ $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only
             }
 
             MoveCaretTo(origin);
-            RemoveTabIfExists(origin);
+            RemoveTabIfExists(origin);     // “\t” が残っていれば除去
             _commitOriginPos = null;
         }
 
         /* =====================================================================
-                                 Helper  (indent / caret)
+                         ★ インデント調整 (仮想空白対応版) ★
         =====================================================================*/
-        /// 行頭から <paramref name="pos"/> 直前までの文字列 (= 現在行インデント)
-        private string GetIndentString(int pos)
-        {
-            var snap = _view.TextSnapshot;
-            var line = snap.GetLineFromPosition(pos);
-            return snap.GetText(line.Start.Position, pos - line.Start.Position);
-        }
-
-        private static string CleanAndReindent(string raw, string indent)
+        private static string ReindentWithCaretIndent(string raw, string realIndent, string virtualIndent)
         {
             var lines = raw.Replace("\r\n", "\n").Split('\n');
 
@@ -135,18 +132,25 @@ $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only
                                  .DefaultIfEmpty(0)
                                  .Min();
 
-            // ① 先頭共通インデントをすべての行から削除
+            // 共通先頭インデントを削る
             for (int i = 0; i < lines.Length; i++)
                 if (lines[i].Length >= minIndent)
                     lines[i] = lines[i][minIndent..];
 
-            // ② 現在行のインデントをすべての行に付与  🆕
-            for (int i = 0; i < lines.Length; i++)
-                lines[i] = indent + lines[i];
+            // 先頭行: 仮想空白ぶんだけ付加（既存インデントは行内に既にある）
+            lines[0] = virtualIndent + lines[0];
+
+            // 2 行目以降: 実インデント + 仮想空白
+            string fullIndent = realIndent + virtualIndent;
+            for (int i = 1; i < lines.Length; i++)
+                lines[i] = fullIndent + lines[i];
 
             return string.Join("\n", lines);
         }
 
+        /* =====================================================================
+                                    そのほか小物ヘルパ
+        =====================================================================*/
         private void RemoveTabIfExists(int origin)
         {
             var snap = _view.TextSnapshot;
@@ -167,9 +171,6 @@ $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only
             _view.Caret.EnsureVisible();
         }
 
-        /* =====================================================================
-                           Context / post‑process / diagnostics
-        =====================================================================*/
         private static string GetContext(ITextSnapshot snap, int caret)
         {
             var sb = new StringBuilder();
