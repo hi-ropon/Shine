@@ -21,7 +21,7 @@ namespace Shine.Suggestion
                 /* edits            */ edits,
                 /* caret            */ new VirtualSnapshotPoint(span.Start),
                 /* completionState  */ (CompletionState?)null,
-                /* flags            */ ProposalFlags.None,
+                /* flags            */ flags: ProposalFlags.SingleTabToAccept | ProposalFlags.ShowCommitHighlight,
                 /* commitAction     */ () => true,
                 /* proposalId       */ "Shine-Suggestion",
                 /* acceptText       */ null,

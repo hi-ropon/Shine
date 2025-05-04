@@ -1,29 +1,31 @@
-﻿// --------------- InlineSuggestionManager.cs ---------------
-using Microsoft.VisualStudio.Text;
-using Microsoft.VisualStudio.Text.Editor;
+﻿// ファイル名: InlineSuggestionManager.cs
 using System;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
+using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Editor;
 
 namespace Shine.Suggestion
 {
     /// <summary>
-    /// ① キーイベント／キャレット停止を検知  
-    /// ② コンテキスト（直前数行＋コメント）を抽出  
-    /// ③ OpenAI / AzureOpenAI へ補完リクエスト  
-    /// ④ Suggestions.ShowAsync(...) でゴーストテキスト表示
+    /// InlineSuggestionManager：
+    /// ① Enter キーでのみ補完要求
+    /// ② Output ウィンドウへ raw reply 表示
+    /// ③ あらかじめキャレット位置を固定してからリクエスト
+    /// ④ IAsyncCompletionBroker 経由でゴーストテキストを表示
     /// </summary>
-    internal class InlineSuggestionManager
+    internal class InlineSuggestionManager : IDisposable
     {
         private readonly IWpfTextView _view;
         private readonly IChatClientService _chat;
         private readonly CancellationTokenSource _cts = new();
-        private readonly TimeSpan _idleDelay = TimeSpan.FromMilliseconds(750);
-        private bool _requestPending;
+        private static Guid _shineOutputPaneGuid = new("D2E3747C-1234-ABCD-5678-0123456789AB");
 
         public InlineSuggestionManager(IWpfTextView view, IChatClientService chatClient)
         {
@@ -37,47 +39,89 @@ namespace Shine.Suggestion
             await RequestSuggestionAsync();
         }
 
-        /// <summary>一定時間入力が止まったら呼び出し</summary>
-        public void ScheduleIdleRequest()
-        {
-            if (_requestPending) return;
-            _requestPending = true;
-            _ = Task.Delay(_idleDelay, _cts.Token).ContinueWith(async t =>
-            {
-                if (t.IsCanceled) return;
-                await RequestSuggestionAsync();
-            });
-        }
-
+        /// <summary>補完リクエスト処理</summary>
         private async Task RequestSuggestionAsync()
         {
-            _requestPending = false;
-            var caret = _view.Caret.Position.BufferPosition.Position;
-            string context = GetContext(_view.TextSnapshot, caret);
-            if (string.IsNullOrWhiteSpace(context)) return;
+            // 1) UI スレッド保証
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            string prompt =
-$@"#Role
-You are a brilliant pair‑programming AI. Continue the code. Return only code, no comment.
+            // 2) キャレット位置を固定
+            var caretPoint = _view.Caret.Position.BufferPosition;
+            int position = caretPoint.Position;
 
-#Context
-{context}";
+            // 3) コンテキスト取得
+            var snapshot = _view.TextSnapshot;
+            string context = GetContext(snapshot, position);
+            if (string.IsNullOrWhiteSpace(context))
+                return;
 
+            // 4) AI にリクエスト
             string reply;
             try
             {
-                reply = await _chat.GetChatResponseAsync(prompt);
+                reply = await _chat.GetChatResponseAsync(
+$"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only code, no comment.\n\n#Context\n{context}");
             }
             catch
             {
                 return;
             }
 
+            // 5) 重複部分を落としてゴーストテキスト生成
             string suggestion = PostProcess(reply, context);
-            if (!string.IsNullOrWhiteSpace(suggestion))
+            await DumpReplyToOutputAsync(suggestion);
+            DumpAllKeys(_view);
+            if (string.IsNullOrWhiteSpace(suggestion))
+                return;
+
+            //// 6) IAsyncCompletionBroker 経由でゴーストテキストを表示
+            await Suggestions.ShowAsync(_view, suggestion, position);
+        }
+
+        /// <summary>raw AI reply を出力ウィンドウへ</summary>
+        private async Task DumpReplyToOutputAsync(string reply)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            var outWindow = ServiceProvider.GlobalProvider.GetService(typeof(SVsOutputWindow)) as IVsOutputWindow;
+            if (outWindow == null)
+                return;
+
+            // カスタムペインを作成（既存ならスキップ）
+            outWindow.CreatePane(
+                ref _shineOutputPaneGuid,
+                "Shine Suggestions",
+                fInitVisible: 1,
+                fClearWithSolution: 0);
+
+            outWindow.GetPane(ref _shineOutputPaneGuid, out IVsOutputWindowPane pane);
+            if (pane == null)
+                return;
+
+            pane.Activate();
+            pane.OutputString($"[Shine @ {DateTime.Now:HH:mm:ss}]\n{reply}\n\n");
+        }
+
+        /// <summary>PropertyList の全キーを出力 (デバッグ用)</summary>
+        private static void DumpAllKeys(ITextView view)
+        {
+            ThreadHelper.JoinableTaskFactory.Run(async () =>
             {
-                await Suggestions.ShowAsync(_view, suggestion, caret);
-            }
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                var outWindow = ServiceProvider.GlobalProvider
+                    .GetService(typeof(SVsOutputWindow)) as IVsOutputWindow;
+                if (outWindow == null)
+                    return;
+
+                var dbgPaneGuid = VSConstants.GUID_OutWindowDebugPane;
+                outWindow.CreatePane(ref dbgPaneGuid, "Shine-Keys", 1, 0);
+                outWindow.GetPane(ref dbgPaneGuid, out var pane);
+                pane.OutputString("=== PropertyList Keys Start ===\n");
+                foreach (var kv in view.Properties.PropertyList)
+                {
+                    pane.OutputString($"KeyType: {kv.Key.GetType().FullName}\n");
+                }
+                pane.OutputString("=== PropertyList Keys End ===\n\n");
+            });
         }
 
         /// <summary>カーソル直前最大 120 行をコンテキストとして取得</summary>
@@ -86,12 +130,13 @@ You are a brilliant pair‑programming AI. Continue the code. Return only code, 
             var line = snap.GetLineFromPosition(caret);
             var sb = new StringBuilder();
             int lines = 0;
-            while (line.LineNumber >= 0 && lines < 120)
+            while (line != null && lines < 120)
             {
                 sb.Insert(0, line.GetText() + Environment.NewLine);
-                if (sb.Length > 4000) break;      // Token 節約
-                line = line.LineNumber > 0 ? snap.GetLineFromLineNumber(line.LineNumber - 1) : null;
-                if (line == null) break;
+                if (sb.Length > 4000) break;
+                line = line.LineNumber > 0
+                    ? snap.GetLineFromLineNumber(line.LineNumber - 1)
+                    : null;
                 lines++;
             }
             return sb.ToString();
@@ -101,12 +146,14 @@ You are a brilliant pair‑programming AI. Continue the code. Return only code, 
         private static string PostProcess(string ai, string context)
         {
             ai = Regex.Replace(ai.Trim(), @"^```[a-z]*\s*|```$", "", RegexOptions.Multiline).Trim();
-            // 先頭が context と重複している行をドロップ
-            var ctxLines = context.Split('\n').Select(l => l.TrimEnd()).ToList();
+            var ctx = context.Split('\n').Select(l => l.TrimEnd()).ToList();
             var aiLines = ai.Split('\n').ToList();
             int i = 0;
-            while (i < aiLines.Count && i < ctxLines.Count && aiLines[i].Trim() == ctxLines[ctxLines.Count - 1 - i].Trim())
+            while (i < aiLines.Count && i < ctx.Count &&
+                   aiLines[i].Trim() == ctx[ctx.Count - 1 - i].Trim())
+            {
                 i++;
+            }
             return string.Join("\n", aiLines.Skip(i));
         }
 
