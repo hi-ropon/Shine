@@ -70,7 +70,14 @@ namespace Shine.Suggestion
             try
             {
                 reply = await _chat.GetChatResponseAsync(
-$"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only code, no comment.\n\n#Context\n{ctx}");
+$"#Role\n" +
+$"You are a brilliant pair-programming AI. Continue the code. Return only code, no comment.\n\n" +
+
+$"#Policy\n" +
+$"- Only generate the next code as either **one single statement** or **one single block statement**.\n" +
+$"- If the caret is inside an if/for/while/foreach/switch header, return the full block up to its matching closing brace.\n" +
+$"- Always return syntactically complete C# code.\n\n" +
+$"#Context\n{ctx}");
             }
             catch
             {
