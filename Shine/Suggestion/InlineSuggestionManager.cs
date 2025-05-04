@@ -26,7 +26,8 @@ namespace Shine.Suggestion
             new Guid("D2E3747C-1234-ABCD-5678-0123456789AB");
 
         private object? _currentSession;
-        private int? _commitOriginPos;      // Tab 押下時の BufferPosition
+        private int? _commitOriginPos;          // Tab 押下時の BufferPosition
+        private int _commitOriginVSpaces;       // Tab 押下時の VirtualSpaces
 
         /* ───── プロパティ ───── */
         internal bool HasActiveSession => _currentSession != null;
@@ -44,7 +45,12 @@ namespace Shine.Suggestion
         /* =====================================================================
                                  フィルタ側から呼ばれるヘルパ
         =====================================================================*/
-        internal void RememberCaret() => _commitOriginPos = _view.Caret.Position.BufferPosition;
+        internal void RememberCaret()
+        {
+            _commitOriginPos = _view.Caret.Position.BufferPosition;
+            _commitOriginVSpaces = _view.Caret.Position.VirtualSpaces;
+        }
+
         internal void SetCurrentSession(object s) => _currentSession = s;
 
         /* =====================================================================
@@ -87,7 +93,7 @@ $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only
             // VS がコミット済みならキャレットは右へ進んでいる
             if (_view.Caret.Position.BufferPosition > origin)
             {
-                MoveCaretTo(origin);
+                MoveCaretTo(origin + _commitOriginVSpaces);
                 _commitOriginPos = null;
                 return;
             }
@@ -95,16 +101,13 @@ $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only
             var raw = LastProposalText;
             if (string.IsNullOrEmpty(raw)) { _commitOriginPos = null; return; }
 
-            // ── ① 行頭～実インデント文字列
+            /* ── インデント計算 ─────────────────────────── */
             var snap = _view.TextSnapshot;
             var line = snap.GetLineFromPosition(origin);
             string realIndent = snap.GetText(line.Start.Position, origin - line.Start.Position);
+            string virtualIndent = new string(' ', _commitOriginVSpaces);
 
-            // ── ② 仮想空白 (Tab で動いた分など) のスペースを生成
-            int virtualSpaces = _view.Caret.Position.VirtualSpaces;
-            string virtualIndent = new string(' ', virtualSpaces);
-
-            // ── ③ 提案テキストをインデント調整
+            /* ── インデント付け直し ＆ 挿入 ───────────────── */
             string fixedTxt = ReindentWithCaretIndent(raw, realIndent, virtualIndent);
 
             using (var edit = _view.TextBuffer.CreateEdit())
@@ -113,13 +116,14 @@ $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only
                 edit.Apply();
             }
 
-            MoveCaretTo(origin);
-            RemoveTabIfExists(origin);     // “\t” が残っていれば除去
+            /* ── キャレットを「コード先頭」へ移動 ──────────── */
+            MoveCaretTo(origin + _commitOriginVSpaces);   // ← Home キー 1 回分
+            RemoveTabIfExists(origin);
             _commitOriginPos = null;
         }
 
         /* =====================================================================
-                         ★ インデント調整 (仮想空白対応版) ★
+                              インデント調整ユーティリティ
         =====================================================================*/
         private static string ReindentWithCaretIndent(string raw, string realIndent, string virtualIndent)
         {
@@ -132,15 +136,15 @@ $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only
                                  .DefaultIfEmpty(0)
                                  .Min();
 
-            // 共通先頭インデントを削る
+            // 共通インデントを削除
             for (int i = 0; i < lines.Length; i++)
                 if (lines[i].Length >= minIndent)
                     lines[i] = lines[i][minIndent..];
 
-            // 先頭行: 仮想空白ぶんだけ付加（既存インデントは行内に既にある）
+            // 先頭行 : 仮想インデントだけ
             lines[0] = virtualIndent + lines[0];
 
-            // 2 行目以降: 実インデント + 仮想空白
+            // 2 行目以降 : 実インデント + 仮想インデント
             string fullIndent = realIndent + virtualIndent;
             for (int i = 1; i < lines.Length; i++)
                 lines[i] = fullIndent + lines[i];
@@ -162,12 +166,16 @@ $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only
             }
         }
 
-        private void MoveCaretTo(int pos)
+        /// <summary>
+        /// origin + VirtualSpaces へキャレットを移動  
+        /// （＝行頭の実インデントと仮想インデントをスキップした位置）
+        /// </summary>
+        private void MoveCaretTo(int absolutePosition)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var snap = _view.TextSnapshot;
-            pos = Math.Max(0, Math.Min(pos, snap.Length));
-            _view.Caret.MoveTo(new SnapshotPoint(snap, pos));
+            absolutePosition = Math.Max(0, Math.Min(absolutePosition, snap.Length));
+            _view.Caret.MoveTo(new SnapshotPoint(snap, absolutePosition));
             _view.Caret.EnsureVisible();
         }
 

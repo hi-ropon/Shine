@@ -10,9 +10,8 @@ using System.Threading.Tasks;
 namespace Shine.Suggestion
 {
     /// <summary>
-    /// エディタに Tab／Enter をフックして
-    /// ・Tab なら IntelliCode / Copilot へバブル → 30 ms 待機 → フォールバック
-    /// ・Enter なら AI へ補完リクエスト
+    /// Tab → VS / Copilot へバブル → 30 ms 待機 → フォールバック  
+    /// Enter → AI へ補完リクエスト
     /// </summary>
     internal sealed class InlineSuggestionCommandFilter : IOleCommandTarget
     {
@@ -20,54 +19,46 @@ namespace Shine.Suggestion
         private readonly InlineSuggestionManager _manager;
         private IOleCommandTarget? _next;
 
-        public InlineSuggestionCommandFilter(IWpfTextView view, InlineSuggestionManager manager)
+        internal InlineSuggestionCommandFilter(IWpfTextView view, InlineSuggestionManager manager)
         {
             _view = view;
             _manager = manager;
         }
 
-        /// <summary>VS から渡されるネイティブ IVsTextView にフィルタを登録</summary>
-        public void Attach(IVsTextView textViewAdapter)
-            => textViewAdapter.AddCommandFilter(this, out _next);
+        public void Attach(IVsTextView adapter)
+            => adapter.AddCommandFilter(this, out _next);
 
-        /* =================================================================== */
-        /*                       IOleCommandTarget 実装                         */
-        /* =================================================================== */
-        public int QueryStatus(ref Guid pguidCmdGroup, uint cCmds,
-                               OLECMD[] prgCmds, IntPtr pCmdText)
-            => _next!.QueryStatus(ref pguidCmdGroup, cCmds, prgCmds, pCmdText);
+        public int QueryStatus(ref Guid pg, uint c, OLECMD[] cmds, IntPtr pTxt)
+            => _next!.QueryStatus(ref pg, c, cmds, pTxt);
 
-        public int Exec(ref Guid pguid, uint id, uint opt,
-                        IntPtr pvaIn, IntPtr pvaOut)
+        public int Exec(ref Guid pg, uint id, uint opt, IntPtr inPtr, IntPtr outPtr)
         {
-            /* ───────────── Tab ───────────── */
-            if (pguid == VSConstants.VSStd2K
-                && id == (uint)VSConstants.VSStd2KCmdID.TAB
-                && _manager.HasActiveSession)
+            /* ───────── Tab ───────── */
+            if (pg == VSConstants.VSStd2K &&
+                id == (uint)VSConstants.VSStd2KCmdID.TAB &&
+                _manager.HasActiveSession)
             {
-                _manager.RememberCaret();                         // ① 押下前の位置を記録
-                var hr = _next!.Exec(ref pguid, id, opt, pvaIn, pvaOut); // ② そのままバブル
+                _manager.RememberCaret();                     // 押下前をメモ
+                var hr = _next!.Exec(ref pg, id, opt, inPtr, outPtr);
 
-                // ③ 30 ms 後にフォールバック挿入を試みる
                 ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
                 {
                     await Task.Delay(30);
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    _manager.FallbackInsertIfNeeded();            // VS が挿入しなければ自前で
+                    _manager.FallbackInsertIfNeeded();
                 });
 
                 return hr;
             }
 
-            /* ───────────── Enter ───────────── */
-            if (pguid == VSConstants.VSStd2K
-                && id == (uint)VSConstants.VSStd2KCmdID.RETURN)
+            /* ───────── Enter ───────── */
+            if (pg == VSConstants.VSStd2K &&
+                id == (uint)VSConstants.VSStd2KCmdID.RETURN)
             {
                 _ = Task.Run(() => _manager.OnEnterAsync());
             }
 
-            /* ───────── それ以外 ───────── */
-            return _next!.Exec(ref pguid, id, opt, pvaIn, pvaOut);
+            return _next!.Exec(ref pg, id, opt, inPtr, outPtr);
         }
     }
 }
