@@ -1,273 +1,221 @@
 ﻿// ファイル名: InlineSuggestionManager.cs
 using System;
 using System.Linq;
-using System.Reflection;
+using System.Runtime.Remoting.Contexts;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Shine.Suggestion
 {
     /// <summary>
-    /// InlineSuggestionManager：
-    /// ① Enter キーでのみ補完要求
-    /// ② Output ウィンドウへ raw reply 表示
-    /// ③ あらかじめキャレット位置を固定してからリクエスト
-    /// ④ IAsyncCompletionBroker 経由でゴーストテキストを表示
+    /// ① Enter で AI へ補完要求
+    /// ② Tab で VS がコミットしなければ自前でフォールバック挿入
+    ///    ‑ キャレット行のインデントを維持して貼り付け
     /// </summary>
-    internal class InlineSuggestionManager : IDisposable
+    internal sealed class InlineSuggestionManager : IDisposable
     {
         private readonly IWpfTextView _view;
         private readonly IChatClientService _chat;
         private readonly CancellationTokenSource _cts = new();
-        private static Guid _shineOutputPaneGuid = new("D2E3747C-1234-ABCD-5678-0123456789AB");
-        private object? _currentSession;
-        private bool _expectingCommit = false;
-        private int? _commitOriginPos;   // Tab を押した時点のキャレット位置
+        private static Guid _paneGuid = new Guid("D2E3747C-1234-ABCD-5678-0123456789AB");
 
+        private object? _currentSession;          // IntelliCode の SuggestionSession
+        private int? _commitOriginPos;         // Tab 押下時のキャレット位置
+
+        /* ───── プロパティ ───── */
         internal bool HasActiveSession => _currentSession != null;
-
-        internal void MarkExpectingCommit() => _expectingCommit = true;
-
-        internal void SetCurrentSession(object session) => _currentSession = session;
-
         internal string? LastProposalText
-             => _view.Properties.TryGetProperty<string>("Shine.LastProposalText", out var t) ? t : null;
+            => _view.Properties.TryGetProperty<string>("Shine.LastProposalText", out var t) ? t : null;
 
-        internal void RememberCaret() => _commitOriginPos = _view.Caret.Position.BufferPosition;
-
-        public InlineSuggestionManager(IWpfTextView view, IChatClientService chatClient)
+        /* ───── ctor ───── */
+        internal InlineSuggestionManager(IWpfTextView view, IChatClientService chat)
         {
             _view = view;
-            _chat = chatClient;
-
-            // キャレットが動いたら「コミットされた」と判定してフラグをクリア
-            _view.Caret.PositionChanged += (_, __) => _expectingCommit = false;
+            _chat = chat;
+            // キャレットが動いたらフォールバック不要
+            _view.Caret.PositionChanged += (_, __) => _commitOriginPos = null;
         }
 
-        /// <summary>Enter キー押下時に呼び出し</summary>
-        public async Task OnEnterAsync()
-        {
-            await RequestSuggestionAsync();
-        }
+        /* =====================================================================
+                               Public helper from filters
+        =====================================================================*/
+        internal void RememberCaret() => _commitOriginPos = _view.Caret.Position.BufferPosition;
+        internal void SetCurrentSession(object s) => _currentSession = s;
 
-        /// <summary>補完リクエスト処理</summary>
+        /* =====================================================================
+                                     Enter → AI へ問い合わせ
+        =====================================================================*/
+        public async Task OnEnterAsync() => await RequestSuggestionAsync();
+
         private async Task RequestSuggestionAsync()
         {
-            // 1) UI スレッド保証
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            // 2) キャレット位置を固定
-            var caretPoint = _view.Caret.Position.BufferPosition;
-            int position = caretPoint.Position;
+            int caret = _view.Caret.Position.BufferPosition.Position;
+            string ctx = GetContext(_view.TextSnapshot, caret);
+            if (string.IsNullOrWhiteSpace(ctx)) return;
 
-            // 3) コンテキスト取得
-            var snapshot = _view.TextSnapshot;
-            string context = GetContext(snapshot, position);
-            if (string.IsNullOrWhiteSpace(context))
-                return;
-
-            // 4) AI にリクエスト
             string reply;
             try
             {
                 reply = await _chat.GetChatResponseAsync(
-$"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only code, no comment.\n\n#Context\n{context}");
+$"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only code, no comment.\n\n#Context\n{ctx}");
             }
-            catch
+            catch 
             {
                 return;
             }
 
-            // 5) 重複部分を落としてゴーストテキスト生成
-            string suggestion = PostProcess(reply, context);
-            await DumpReplyToOutputAsync(suggestion);
-            DumpAllKeys(_view);
-            if (string.IsNullOrWhiteSpace(suggestion))
-                return;
+            string suggestion = PostProcess(reply, ctx);
+#if DEBUG
+            await DumpReplyAsync(suggestion);
+#endif
+            if (string.IsNullOrWhiteSpace(suggestion)) return;
 
-            //// 6) IAsyncCompletionBroker 経由でゴーストテキストを表示
-            await Suggestions.ShowAsync(_view, this, suggestion, position);
+            await Suggestions.ShowAsync(_view, this, suggestion, caret);
         }
 
-        /// <summary>raw AI reply を出力ウィンドウへ</summary>
-        private async Task DumpReplyToOutputAsync(string reply)
+        /* =====================================================================
+                                  フォールバック (Tab)
+        =====================================================================*/
+        internal void FallbackInsertIfNeeded()
         {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var outWindow = ServiceProvider.GlobalProvider.GetService(typeof(SVsOutputWindow)) as IVsOutputWindow;
-            if (outWindow == null)
-                return;
+            if (_commitOriginPos is not int origin) return;
 
-            // カスタムペインを作成（既存ならスキップ）
-            outWindow.CreatePane(
-                ref _shineOutputPaneGuid,
-                "Shine Suggestions",
-                fInitVisible: 1,
-                fClearWithSolution: 0);
-
-            outWindow.GetPane(ref _shineOutputPaneGuid, out IVsOutputWindowPane pane);
-            if (pane == null)
-                return;
-
-            pane.Activate();
-            pane.OutputString($"[Shine @ {DateTime.Now:HH:mm:ss}]\n{reply}\n\n");
-        }
-
-        /// <summary>PropertyList の全キーを出力 (デバッグ用)</summary>
-        private static void DumpAllKeys(ITextView view)
-        {
-            ThreadHelper.JoinableTaskFactory.Run(async () =>
+            // VS がコミット済みならキャレットは右へ進んでいる
+            if (_view.Caret.Position.BufferPosition > origin)
             {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                var outWindow = ServiceProvider.GlobalProvider
-                    .GetService(typeof(SVsOutputWindow)) as IVsOutputWindow;
-                if (outWindow == null)
-                    return;
+                MoveCaretTo(origin);
+                _commitOriginPos = null;
+                return;
+            }
 
-                var dbgPaneGuid = VSConstants.GUID_OutWindowDebugPane;
-                outWindow.CreatePane(ref dbgPaneGuid, "Shine-Keys", 1, 0);
-                outWindow.GetPane(ref dbgPaneGuid, out var pane);
-                pane.OutputString("=== PropertyList Keys Start ===\n");
-                foreach (var kv in view.Properties.PropertyList)
-                {
-                    pane.OutputString($"KeyType: {kv.Key.GetType().FullName}\n");
-                }
-                pane.OutputString("=== PropertyList Keys End ===\n\n");
-            });
+            var raw = LastProposalText;
+            if (string.IsNullOrEmpty(raw)) { _commitOriginPos = null; return; }
+
+            string indent = GetIndentString(origin);
+            string fixedTxt = CleanAndReindent(raw, indent);
+
+            using (var edit = _view.TextBuffer.CreateEdit())
+            {
+                edit.Insert(origin, fixedTxt);
+                edit.Apply();
+            }
+
+            MoveCaretTo(origin);
+            RemoveTabIfExists(origin);
+            _commitOriginPos = null;
         }
 
-        /// <summary>カーソル直前最大 120 行をコンテキストとして取得</summary>
+        /* =====================================================================
+                                 Helper  (indent / caret)
+        =====================================================================*/
+        /// 行頭から <paramref name="pos"/> 直前までの文字列 (= 現在行インデント)
+        private string GetIndentString(int pos)
+        {
+            var snap = _view.TextSnapshot;
+            var line = snap.GetLineFromPosition(pos);
+            return snap.GetText(line.Start.Position, pos - line.Start.Position);
+        }
+
+        private static string CleanAndReindent(string raw, string indent)
+        {
+            var lines = raw.Replace("\r\n", "\n").Split('\n');
+
+            static bool IsIndentChar(char c) => c is ' ' or '\t' or '\u3000';
+
+            int minIndent = lines.Where(l => l.Length > 0)
+                                 .Select(l => l.TakeWhile(IsIndentChar).Count())
+                                 .DefaultIfEmpty(0)
+                                 .Min();
+
+            // ① 先頭共通インデントをすべての行から削除
+            for (int i = 0; i < lines.Length; i++)
+                if (lines[i].Length >= minIndent)
+                    lines[i] = lines[i][minIndent..];
+
+            // ② 現在行のインデントをすべての行に付与  🆕
+            for (int i = 0; i < lines.Length; i++)
+                lines[i] = indent + lines[i];
+
+            return string.Join("\n", lines);
+        }
+
+        private void RemoveTabIfExists(int origin)
+        {
+            var snap = _view.TextSnapshot;
+            if (origin < snap.Length && snap.GetText(origin, 1) == "\t")
+            {
+                using var edit = _view.TextBuffer.CreateEdit();
+                edit.Delete(origin, 1);
+                edit.Apply();
+            }
+        }
+
+        private void MoveCaretTo(int pos)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var snap = _view.TextSnapshot;
+            pos = Math.Max(0, Math.Min(pos, snap.Length));
+            _view.Caret.MoveTo(new SnapshotPoint(snap, pos));
+            _view.Caret.EnsureVisible();
+        }
+
+        /* =====================================================================
+                           Context / post‑process / diagnostics
+        =====================================================================*/
         private static string GetContext(ITextSnapshot snap, int caret)
         {
-            var line = snap.GetLineFromPosition(caret);
             var sb = new StringBuilder();
-            int lines = 0;
-            while (line != null && lines < 120)
+            var line = snap.GetLineFromPosition(caret);
+            int cnt = 0;
+            while (line != null && cnt < 120)
             {
                 sb.Insert(0, line.GetText() + Environment.NewLine);
                 if (sb.Length > 4000) break;
-                line = line.LineNumber > 0
-                    ? snap.GetLineFromLineNumber(line.LineNumber - 1)
-                    : null;
-                lines++;
+                line = line.LineNumber > 0 ? snap.GetLineFromLineNumber(line.LineNumber - 1) : null;
+                cnt++;
             }
             return sb.ToString();
         }
 
-        /// <summary>AI 応答から既存コード重複を除去</summary>
         private static string PostProcess(string ai, string context)
         {
             ai = Regex.Replace(ai.Trim(), @"^```[a-z]*\s*|```$", "", RegexOptions.Multiline).Trim();
-            var ctx = context.Split('\n').Select(l => l.TrimEnd()).ToList();
+
+            static string N(string l)
+            {
+                var s = l.TrimEnd();
+                int idx = s.IndexOf("//", StringComparison.Ordinal);
+                if (idx >= 0) s = s[..idx];
+                return s.Trim();
+            }
+
+            var ctxSet = context.Split('\n').Select(N).Where(l => l.Length > 0).ToHashSet();
             var aiLines = ai.Split('\n').ToList();
-            int i = 0;
-            while (i < aiLines.Count && i < ctx.Count &&
-                   aiLines[i].Trim() == ctx[ctx.Count - 1 - i].Trim())
-            {
-                i++;
-            }
-            return string.Join("\n", aiLines.Skip(i));
+
+            while (aiLines.Count > 0 && (aiLines[0].Length == 0 || ctxSet.Contains(N(aiLines[0]))))
+                aiLines.RemoveAt(0);
+
+            return string.Join("\n", aiLines);
         }
 
-        internal bool TryCommitCurrent(CancellationToken ct)
+#if DEBUG
+        private static async Task DumpReplyAsync(string text)
         {
-            if (_currentSession == null) return false;
-
-            var type = _currentSession.GetType();
-            MethodInfo? mi = null;
-
-            foreach (var name in _commitMethods)
-            {
-                mi = type.GetMethod(name, BindingFlags.Instance |
-                                           BindingFlags.Public |
-                                           BindingFlags.NonPublic);
-                if (mi != null) break;
-            }
-
-            if (mi == null)
-            {
-                DumpMethodsForDebug(type);      // まだ見つからなければログ確認
-                return false;
-            }
-
-            // パラメーターに応じて呼び分け
-            var p = mi.GetParameters();
-            object? invokeResult = p.Length switch
-            {
-                0 => mi.Invoke(_currentSession, Array.Empty<object>()), // CommitGrayTextAsync()
-                1 when p[0].ParameterType == typeof(bool)
-                         => mi.Invoke(_currentSession, new object[] { true }),  // CommitSuggestion(true)
-                1 => mi.Invoke(_currentSession, new object[] { ct }),    // TryCommitAsync(CT)
-                2 => mi.Invoke(_currentSession, new object[] { '\t', ct }),
-                _ => null
-            };
-
-            if (invokeResult is Task task)
-                task.GetAwaiter().GetResult();
-
-            _currentSession = null;
-            return true;
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            if (ServiceProvider.GlobalProvider.GetService(typeof(SVsOutputWindow)) is not IVsOutputWindow ow) return;
+            ow.CreatePane(ref _paneGuid, "Shine Suggestions", 1, 0);
+            ow.GetPane(ref _paneGuid, out var pane);
+            pane?.OutputString($"[Shine @ {DateTime.Now:HH:mm:ss}]\n{text}\n\n");
         }
-
-        internal void FallbackInsertIfNeeded()
-        {
-            if (_commitOriginPos is null) return;            // 記録がない
-            if (_view.Caret.Position.BufferPosition > _commitOriginPos) return; // 文字が入った
-
-            var text = LastProposalText;
-            if (!string.IsNullOrEmpty(text))
-            {
-                using var edit = _view.TextBuffer.CreateEdit();
-                edit.Insert(_commitOriginPos.Value, text);
-                edit.Apply();
-            }
-
-            RemoveTabAtOriginIfAny();
-        }
-
-        // ★ Tab 文字を消すユーティリティ
-        internal void RemoveTabAtOriginIfAny()
-        {
-            if (_commitOriginPos is not int pos) return;
-
-            var snap = _view.TextSnapshot;
-            if (pos < snap.Length && snap.GetText(pos, 1) == "\t")
-            {
-                using var edit = _view.TextBuffer.CreateEdit();
-                edit.Delete(pos, 1);          // 1 文字だけ削除
-                edit.Apply();
-            }
-            _commitOriginPos = null;          // 使い終わったのでクリア
-        }
-
-        [System.Diagnostics.Conditional("DEBUG")]
-        private static void DumpMethodsForDebug(Type t)
-        {
-            System.Diagnostics.Debug.WriteLine($"[Shine] {t.FullName} methods:");
-            foreach (var m in t.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-                System.Diagnostics.Debug.WriteLine($"  {m.Name}({string.Join(", ", m.GetParameters().Select(p => p.ParameterType.Name))})");
-        }
-
-
-        private static readonly string[] _commitMethods =
-        {
-            // 旧版
-            "TryCommitAsync",
-            "TryAcceptCurrentProposalAsync",
-            "TryAcceptInlineAsync",
-            "TryAcceptDisplayedProposalAsync",
-            // 新版
-            "CommitGrayTextAsync",          // ★ VS17.10+
-            "CommitSuggestion",             // ★ VS17.10+
-        };
-
+#endif
 
         public void Dispose() => _cts.Cancel();
     }

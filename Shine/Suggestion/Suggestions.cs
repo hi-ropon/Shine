@@ -2,7 +2,6 @@
 //  ファイル名: Suggestions.cs
 //  説明: IntelliCode (VS 17.10+) の内部 API をリフレクションで呼び出し、
 //       ゴーストテキスト（インライン補完）を表示するユーティリティ。
-//       ※ 17.9 以前の互換処理は削除済み
 // ────────────────────────────────────────────────
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Language.Proposals;
@@ -126,7 +125,6 @@ namespace Shine.Suggestion
 
             manager.SetCurrentSession(session);
 
-            // ★ 表示したゴーストテキストを View.Properties に保持
             view.Properties["Shine.LastProposalText"] = ghostText;
 
             var prop = proposals.Proposals.First();
@@ -218,20 +216,6 @@ namespace Shine.Suggestion
                 if (prop?.CanWrite == true) { prop.SetValue(target, value); return; }
             }
             Log($"[Suggestions] Proposals 注入に失敗: {type.Name}");
-        }
-
-        private static async Task<bool> GetDisplayedAsync(object taskObj)
-        {
-            if (taskObj is not Task task) return false;
-            await task.ConfigureAwait(false);
-
-            var result = task.GetType().GetProperty("Result")?.GetValue(task);
-            return result switch
-            {
-                bool b => b,
-                null => false,
-                _ => (bool)(result.GetType().GetProperty("IsDisplayed")?.GetValue(result) ?? false)
-            };
         }
 
         private static void Log(string msg)
