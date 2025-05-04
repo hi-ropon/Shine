@@ -52,7 +52,7 @@ namespace Shine.Suggestion
         }
 
         // ────────── Public API ──────────
-        public static async Task ShowAsync(ITextView view, string ghostText, int position)
+        public static async Task ShowAsync(ITextView view, InlineSuggestionManager manager, string ghostText, int position)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
@@ -123,6 +123,11 @@ namespace Shine.Suggestion
                     +"(改行・重複・機能設定などが原因)");
                 return;
             }
+
+            manager.SetCurrentSession(session);
+
+            // ★ 表示したゴーストテキストを View.Properties に保持
+            view.Properties["Shine.LastProposalText"] = ghostText;
 
             var prop = proposals.Proposals.First();
             await ((dynamic)session).DisplayProposalAsync(prop, CancellationToken.None);

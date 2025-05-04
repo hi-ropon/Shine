@@ -1,6 +1,7 @@
 ﻿// ファイル名: InlineSuggestionManager.cs
 using System;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -10,6 +11,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Shine.Suggestion
 {
@@ -26,11 +28,28 @@ namespace Shine.Suggestion
         private readonly IChatClientService _chat;
         private readonly CancellationTokenSource _cts = new();
         private static Guid _shineOutputPaneGuid = new("D2E3747C-1234-ABCD-5678-0123456789AB");
+        private object? _currentSession;
+        private bool _expectingCommit = false;
+        private int? _commitOriginPos;   // Tab を押した時点のキャレット位置
+
+        internal bool HasActiveSession => _currentSession != null;
+
+        internal void MarkExpectingCommit() => _expectingCommit = true;
+
+        internal void SetCurrentSession(object session) => _currentSession = session;
+
+        internal string? LastProposalText
+             => _view.Properties.TryGetProperty<string>("Shine.LastProposalText", out var t) ? t : null;
+
+        internal void RememberCaret() => _commitOriginPos = _view.Caret.Position.BufferPosition;
 
         public InlineSuggestionManager(IWpfTextView view, IChatClientService chatClient)
         {
             _view = view;
             _chat = chatClient;
+
+            // キャレットが動いたら「コミットされた」と判定してフラグをクリア
+            _view.Caret.PositionChanged += (_, __) => _expectingCommit = false;
         }
 
         /// <summary>Enter キー押下時に呼び出し</summary>
@@ -75,7 +94,7 @@ $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only
                 return;
 
             //// 6) IAsyncCompletionBroker 経由でゴーストテキストを表示
-            await Suggestions.ShowAsync(_view, suggestion, position);
+            await Suggestions.ShowAsync(_view, this, suggestion, position);
         }
 
         /// <summary>raw AI reply を出力ウィンドウへ</summary>
@@ -156,6 +175,82 @@ $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only
             }
             return string.Join("\n", aiLines.Skip(i));
         }
+
+        internal bool TryCommitCurrent(CancellationToken ct)
+        {
+            if (_currentSession == null) return false;
+
+            var type = _currentSession.GetType();
+            MethodInfo? mi = null;
+
+            foreach (var name in _commitMethods)
+            {
+                mi = type.GetMethod(name, BindingFlags.Instance |
+                                           BindingFlags.Public |
+                                           BindingFlags.NonPublic);
+                if (mi != null) break;
+            }
+
+            if (mi == null)
+            {
+                DumpMethodsForDebug(type);      // まだ見つからなければログ確認
+                return false;
+            }
+
+            // パラメーターに応じて呼び分け
+            var p = mi.GetParameters();
+            object? invokeResult = p.Length switch
+            {
+                0 => mi.Invoke(_currentSession, Array.Empty<object>()), // CommitGrayTextAsync()
+                1 when p[0].ParameterType == typeof(bool)
+                         => mi.Invoke(_currentSession, new object[] { true }),  // CommitSuggestion(true)
+                1 => mi.Invoke(_currentSession, new object[] { ct }),    // TryCommitAsync(CT)
+                2 => mi.Invoke(_currentSession, new object[] { '\t', ct }),
+                _ => null
+            };
+
+            if (invokeResult is Task task)
+                task.GetAwaiter().GetResult();
+
+            _currentSession = null;
+            return true;
+        }
+
+        internal void FallbackInsertIfNeeded()
+        {
+            if (_commitOriginPos is null) return;            // 記録がない
+            if (_view.Caret.Position.BufferPosition > _commitOriginPos) return; // 文字が入った
+
+            var text = LastProposalText;
+            if (string.IsNullOrEmpty(text)) return;
+
+            using var edit = _view.TextBuffer.CreateEdit();
+            edit.Insert(_commitOriginPos.Value, text);
+            edit.Apply();
+            _commitOriginPos = null;
+        }
+
+        [System.Diagnostics.Conditional("DEBUG")]
+        private static void DumpMethodsForDebug(Type t)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Shine] {t.FullName} methods:");
+            foreach (var m in t.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                System.Diagnostics.Debug.WriteLine($"  {m.Name}({string.Join(", ", m.GetParameters().Select(p => p.ParameterType.Name))})");
+        }
+
+
+        private static readonly string[] _commitMethods =
+        {
+            // 旧版
+            "TryCommitAsync",
+            "TryAcceptCurrentProposalAsync",
+            "TryAcceptInlineAsync",
+            "TryAcceptDisplayedProposalAsync",
+            // 新版
+            "CommitGrayTextAsync",          // ★ VS17.10+
+            "CommitSuggestion",             // ★ VS17.10+
+        };
+
 
         public void Dispose() => _cts.Cancel();
     }

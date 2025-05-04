@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Shine.Suggestion
@@ -32,12 +33,27 @@ namespace Shine.Suggestion
 
         public int Exec(ref Guid pguid, uint id, uint opt, IntPtr pvaIn, IntPtr pvaOut)
         {
-            if (pguid == VSConstants.VSStd2K && id == (uint)VSConstants.VSStd2KCmdID.RETURN)
+            if (pguid == VSConstants.VSStd2K && id == (uint)VSConstants.VSStd2KCmdID.TAB)
+            {
+                if (_manager.HasActiveSession)
+                {
+                    // Tab 処理前のキャレット位置を記録
+                    _manager.RememberCaret();
+
+                    // 1) Tab を下位へバブルさせる
+                    var hr = _next.Exec(ref pguid, id, opt, pvaIn, pvaOut);
+
+                    // 2) バッファが変化しなければ自前で挿入
+                    _manager.FallbackInsertIfNeeded();
+
+                    return hr;            // 既にバブルさせたのでそのまま返す
+                }
+            }
+            else if (pguid == VSConstants.VSStd2K && id == (uint)VSConstants.VSStd2KCmdID.RETURN)
             {
                 _ = Task.Run(() => _manager.OnEnterAsync());
             }
             return _next.Exec(ref pguid, id, opt, pvaIn, pvaOut);
         }
-
     }
 }
