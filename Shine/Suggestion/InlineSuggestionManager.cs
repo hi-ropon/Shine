@@ -72,7 +72,10 @@ namespace Shine.Suggestion
                 reply = await _chat.GetChatResponseAsync(
 $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only code, no comment.\n\n#Context\n{ctx}");
             }
-            catch { return; }
+            catch
+            {
+                return;
+            }
 
             string suggestion = PostProcess(reply, ctx);
 #if DEBUG
@@ -179,17 +182,25 @@ $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only
             _view.Caret.EnsureVisible();
         }
 
+        /// <summary>
+        /// キャレット位置の<strong>前後</strong>から最大 120 行ずつ取り込み、
+        /// 合計 4 000 文字以内で AI へ渡す文脈を生成する。
+        /// </summary>
         private static string GetContext(ITextSnapshot snap, int caret)
         {
-            var sb = new StringBuilder();
-            var line = snap.GetLineFromPosition(caret);
-            int cnt = 0;
-            while (line != null && cnt < 120)
+            const int MaxLinesEachSide = 120;   // 前後それぞれの行数上限
+            const int MaxChars = 4000;  // 文字数上限
+
+            var caretLine = snap.GetLineFromPosition(caret);
+            int startLine = Math.Max(0, caretLine.LineNumber - MaxLinesEachSide);
+            int endLine = Math.Min(snap.LineCount - 1, caretLine.LineNumber + MaxLinesEachSide);
+
+            var sb = new StringBuilder(capacity: MaxChars + 256);
+            for (int i = startLine; i <= endLine; i++)
             {
-                sb.Insert(0, line.GetText() + Environment.NewLine);
-                if (sb.Length > 4000) break;
-                line = line.LineNumber > 0 ? snap.GetLineFromLineNumber(line.LineNumber - 1) : null;
-                cnt++;
+                sb.AppendLine(snap.GetLineFromLineNumber(i).GetText());
+                if (sb.Length > MaxChars)
+                    break;
             }
             return sb.ToString();
         }
