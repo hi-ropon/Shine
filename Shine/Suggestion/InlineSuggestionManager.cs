@@ -222,12 +222,29 @@ $"#Role\nYou are a brilliant pair-programming AI. Continue the code. Return only
             if (_view.Caret.Position.BufferPosition > _commitOriginPos) return; // 文字が入った
 
             var text = LastProposalText;
-            if (string.IsNullOrEmpty(text)) return;
+            if (!string.IsNullOrEmpty(text))
+            {
+                using var edit = _view.TextBuffer.CreateEdit();
+                edit.Insert(_commitOriginPos.Value, text);
+                edit.Apply();
+            }
 
-            using var edit = _view.TextBuffer.CreateEdit();
-            edit.Insert(_commitOriginPos.Value, text);
-            edit.Apply();
-            _commitOriginPos = null;
+            RemoveTabAtOriginIfAny();
+        }
+
+        // ★ Tab 文字を消すユーティリティ
+        internal void RemoveTabAtOriginIfAny()
+        {
+            if (_commitOriginPos is not int pos) return;
+
+            var snap = _view.TextSnapshot;
+            if (pos < snap.Length && snap.GetText(pos, 1) == "\t")
+            {
+                using var edit = _view.TextBuffer.CreateEdit();
+                edit.Delete(pos, 1);          // 1 文字だけ削除
+                edit.Apply();
+            }
+            _commitOriginPos = null;          // 使い終わったのでクリア
         }
 
         [System.Diagnostics.Conditional("DEBUG")]

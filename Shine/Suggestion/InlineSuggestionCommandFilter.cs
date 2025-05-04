@@ -24,8 +24,6 @@ namespace Shine.Suggestion
         public void Attach(IVsTextView textViewAdapter)
         {
             textViewAdapter.AddCommandFilter(this, out _next);
-            // キャレット移動停止監視
-            //_view.Caret.PositionChanged += (_, __) => _manager.ScheduleIdleRequest();
         }
 
         public int QueryStatus(ref Guid pguidCmdGroup, uint cCmds, OLECMD[] prgCmds, IntPtr pCmdText)
@@ -37,16 +35,11 @@ namespace Shine.Suggestion
             {
                 if (_manager.HasActiveSession)
                 {
-                    // Tab 処理前のキャレット位置を記録
-                    _manager.RememberCaret();
+                    _manager.RememberCaret();               // ① キャレット記録
+                    var hr = _next.Exec(ref pguid, id, opt, pvaIn, pvaOut); // ② Tab をバブル
+                    _manager.RemoveTabAtOriginIfAny();      // ④ 余計な Tab を削除（常に実行）
 
-                    // 1) Tab を下位へバブルさせる
-                    var hr = _next.Exec(ref pguid, id, opt, pvaIn, pvaOut);
-
-                    // 2) バッファが変化しなければ自前で挿入
-                    _manager.FallbackInsertIfNeeded();
-
-                    return hr;            // 既にバブルさせたのでそのまま返す
+                    return hr;
                 }
             }
             else if (pguid == VSConstants.VSStd2K && id == (uint)VSConstants.VSStd2KCmdID.RETURN)
