@@ -27,9 +27,6 @@ namespace Shine.Suggestion
         private static Guid _paneGuid =
             new Guid("D2E3747C-1234-ABCD-5678-0123456789AB");
 
-        private static readonly Regex _headerRegex
-            = new Regex(@"^\s*(if|for|while|do|foreach|switch)\b", RegexOptions.Compiled);
-
         private object? _currentSession;
         private int? _commitOriginPos;          // Tab 押下時の BufferPosition
         private int _commitOriginVSpaces;       // Tab 押下時の VirtualSpaces
@@ -67,6 +64,9 @@ namespace Shine.Suggestion
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
+            // アドオン表示
+            ThinkingAdornmentService.Show(_view);
+
             int caret = _view.Caret.Position.BufferPosition.Position;
             string ctx = GetContext(_view.TextSnapshot, caret);
             if (string.IsNullOrWhiteSpace(ctx)) return;
@@ -81,12 +81,13 @@ $"You are a brilliant pair-programming AI. Continue the code. Return only code, 
 $"#Policy\n" +
 $"- Only generate the next code as either **one single statement** or **one single block statement**.\n" +
 $"- If the caret is inside an if/for/while/foreach/switch header, return the full block up to its matching closing brace.\n" +
-$"- Always return syntactically complete C# code.\n\n" +
+$"- Always return syntactically complete code.\n\n" +
 $"#Context\n{ctx}");
             }
-            catch
+            finally
             {
-                return;
+                // --- ② サジェスト完了後にステータスバーをクリア ---
+                ThinkingAdornmentService.Hide(_view);
             }
 
             string suggestion = PostProcess(reply, ctx);

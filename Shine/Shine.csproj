@@ -96,6 +96,8 @@
     <Compile Include="Suggestion\InlineSuggestionManager.cs" />
     <Compile Include="Suggestion\Proposals.cs" />
     <Compile Include="Suggestion\Suggestions.cs" />
+    <Compile Include="Suggestion\ThinkingAdornmentLayer.cs" />
+    <Compile Include="Suggestion\ThinkingAdornmentService.cs" />
   </ItemGroup>
   <!-- VSIX マニフェスト -->
   <ItemGroup>
