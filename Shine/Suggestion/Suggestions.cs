@@ -145,25 +145,46 @@ namespace Shine.Suggestion
 
         /// <summary>
         /// ゴーストテキストを最大3行に制限し、
+        /// 末尾に余分な閉じ括弧 '}' がある場合は削除した上で、
         /// 先頭行が条件分岐なら1ブロックステートメントのみ、
         /// それ以外は1ステートメントのみ抽出します。
         /// </summary>
         private static string TrimSuggestion(string text)
         {
             // 1. 行数を最大3行に制限
-            var lines = text.Split('\n');
-            var limitedLines = lines.Take(3);
+            var lines = text.Replace("\r\n", "\n").Split('\n').ToList();
+            var limitedLines = lines.Take(3).ToList();
+
+            // 2. 限定後に余分な閉じ括弧があれば取り除く
+            int openCount = limitedLines.Sum(l => l.Count(c => c == '{'));
+            int closeCount = limitedLines.Sum(l => l.Count(c => c == '}'));
+            while (limitedLines.Count > 0 && closeCount > openCount)
+            {
+                var last = limitedLines.Last();
+                int lastClose = last.Count(c => c == '}');
+                // 行全体が単独の '}' または閉じ括弧が多い行なら削除
+                if (last.Trim() == "}" || lastClose > last.Count(c => c == '{'))
+                {
+                    limitedLines.RemoveAt(limitedLines.Count - 1);
+                    closeCount -= lastClose;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
             var limitedText = string.Join("\n", limitedLines).TrimEnd();
 
-            string result;
-            // 2. 先頭行が条件分岐(if/for/while/foreach/switch)の場合は1ブロックステートメントのみ
+            // 3. 先頭行が条件分岐(if/for/while/foreach/switch)の場合は1ブロックステートメントのみ
             var headerPattern = @"^\s*(if|for|while|do|foreach|switch)\b";
+            string result;
             if (Regex.IsMatch(limitedText, headerPattern))
             {
                 int braceIndex = limitedText.IndexOf('{');
                 if (braceIndex >= 0)
                 {
-                    // 最初のブレース以降の最初のステートメントのセミコロンまでを含める
+                    // 最初のブレース以降の最初のセミコロンまでを含める
                     int innerSemi = limitedText.IndexOf(';', braceIndex + 1);
                     result = innerSemi >= 0
                         ? limitedText.Substring(0, innerSemi + 1)
@@ -171,19 +192,18 @@ namespace Shine.Suggestion
                 }
                 else
                 {
-                    // ブレースがない場合は通常の最初のステートメント
                     int semi = limitedText.IndexOf(';');
                     result = semi >= 0 ? limitedText.Substring(0, semi + 1) : limitedText;
                 }
             }
             else
             {
-                // 3. それ以外は最初のステートメントのみ
+                // 4. それ以外は最初のステートメントのみ
                 int semi = limitedText.IndexOf(';');
                 result = semi >= 0 ? limitedText.Substring(0, semi + 1) : limitedText;
             }
 
-            // 4. 文字数上限 240 字に収める
+            // 5. 文字数上限 240 字に収める
             return result.Length > 240
                 ? result.Substring(0, 240)
                 : result;

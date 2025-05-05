@@ -114,25 +114,14 @@ $"#Context\n{ctx}");
                 return;
             }
 
-            // FullProposalText（全文）と LastProposalText（トリム後）を取得
-            _view.Properties.TryGetProperty<string>("Shine.FullProposalText", out var full);
+            // トリム済みテキストのみを取得
             var trimmed = LastProposalText;
-
-            // 条件分岐ヘッダーで始まる提案なら全文、それ以外はトリム後だけを raw に使う
-            string raw;
-            if (!string.IsNullOrEmpty(full) && _headerRegex.IsMatch(full))
-            {
-                raw = full;        // if/while/... のブロック提案は全文
-            }
-            else if (!string.IsNullOrEmpty(trimmed))
-            {
-                raw = trimmed;     // それ以外はトリム後ステートメント
-            }
-            else
+            if (string.IsNullOrEmpty(trimmed))
             {
                 _commitOriginPos = null;
                 return;
             }
+            string raw = trimmed;
 
             // インデント再調整＆挿入
             var snap = _view.TextSnapshot;
