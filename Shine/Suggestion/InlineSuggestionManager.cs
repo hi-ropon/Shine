@@ -110,6 +110,8 @@ $"#Context\n{ctx}");
             if (_view.Caret.Position.BufferPosition > origin)
             {
                 MoveCaretTo(origin + _commitOriginVSpaces);
+                // セッション情報をクリア
+                SetCurrentSession(null);
                 _commitOriginPos = null;
                 return;
             }
@@ -118,6 +120,7 @@ $"#Context\n{ctx}");
             var trimmed = LastProposalText;
             if (string.IsNullOrEmpty(trimmed))
             {
+                SetCurrentSession(null);
                 _commitOriginPos = null;
                 return;
             }
@@ -139,6 +142,9 @@ $"#Context\n{ctx}");
             // キャレット位置を行頭に戻し、Tab文字が残っていれば削除
             MoveCaretTo(origin + _commitOriginVSpaces);
             RemoveTabIfExists(origin);
+
+            // フォールバック後もセッション情報をクリア
+            SetCurrentSession(null);
             _commitOriginPos = null;
         }
 
