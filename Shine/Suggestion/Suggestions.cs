@@ -13,6 +13,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -68,6 +69,9 @@ namespace Shine.Suggestion
                 return;
             }
 
+            // → ① フル提案テキストをプロパティに保存
+            view.Properties["Shine.FullProposalText"] = ghostText;
+
             // ① ProposalCollection 生成（表示拒否を避けるため 3 行・240 文字にトリム）
             ghostText = TrimSuggestion(ghostText);
             if (string.IsNullOrEmpty(ghostText))
@@ -75,6 +79,9 @@ namespace Shine.Suggestion
                 Log("[Suggestions] 空行または改行のみのため提案せず。");
                 return;
             }
+
+            // → ③ トリム後提案をプロパティに保存
+            view.Properties["Shine.LastProposalText"] = ghostText;
 
             var proposals = Proposals.Create(view, ghostText, position);
             if (proposals.Proposals.Count == 0)
@@ -118,8 +125,7 @@ namespace Shine.Suggestion
             var session = task.GetType().GetProperty("Result")?.GetValue(task);
             if (session is null)
             {
-                Log("[Suggestions] IntelliCode が提案を表示しませんでした。"
-                    +"(改行・重複・機能設定などが原因)");
+                Log("[Suggestions] IntelliCode が提案を表示しませんでした。(改行・重複・機能設定などが原因)");
                 return;
             }
 
@@ -138,8 +144,9 @@ namespace Shine.Suggestion
                    .Value;
 
         /// <summary>
-        /// ゴーストテキストを最大3行・240文字にトリムし、
-        /// １ステートメントまたは１コードブロックのみ抽出します。
+        /// ゴーストテキストを最大3行に制限し、
+        /// 先頭行が条件分岐なら1ブロックステートメントのみ、
+        /// それ以外は1ステートメントのみ抽出します。
         /// </summary>
         private static string TrimSuggestion(string text)
         {
@@ -149,36 +156,31 @@ namespace Shine.Suggestion
             var limitedText = string.Join("\n", limitedLines).TrimEnd();
 
             string result;
-
-            // 2. コードブロックが含まれる場合は最初の {…} を抽出
-            if (limitedText.Contains("{"))
+            // 2. 先頭行が条件分岐(if/for/while/foreach/switch)の場合は1ブロックステートメントのみ
+            var headerPattern = @"^\s*(if|for|while|do|foreach|switch)\b";
+            if (Regex.IsMatch(limitedText, headerPattern))
             {
-                int braceDepth = 0;
-                int endPos = -1;
-                for (int i = 0; i < limitedText.Length; i++)
+                int braceIndex = limitedText.IndexOf('{');
+                if (braceIndex >= 0)
                 {
-                    if (limitedText[i] == '{') braceDepth++;
-                    else if (limitedText[i] == '}')
-                    {
-                        braceDepth--;
-                        if (braceDepth == 0)
-                        {
-                            endPos = i;
-                            break;
-                        }
-                    }
+                    // 最初のブレース以降の最初のステートメントのセミコロンまでを含める
+                    int innerSemi = limitedText.IndexOf(';', braceIndex + 1);
+                    result = innerSemi >= 0
+                        ? limitedText.Substring(0, innerSemi + 1)
+                        : limitedText;
                 }
-                result = endPos >= 0
-                    ? limitedText.Substring(0, endPos + 1)
-                    : limitedText;
+                else
+                {
+                    // ブレースがない場合は通常の最初のステートメント
+                    int semi = limitedText.IndexOf(';');
+                    result = semi >= 0 ? limitedText.Substring(0, semi + 1) : limitedText;
+                }
             }
             else
             {
-                // 3. それ以外は最初のセミコロン付きステートメントのみ
-                int idx = limitedText.IndexOf(';');
-                result = idx >= 0
-                    ? limitedText.Substring(0, idx + 1)
-                    : limitedText;
+                // 3. それ以外は最初のステートメントのみ
+                int semi = limitedText.IndexOf(';');
+                result = semi >= 0 ? limitedText.Substring(0, semi + 1) : limitedText;
             }
 
             // 4. 文字数上限 240 字に収める

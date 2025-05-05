@@ -25,6 +25,9 @@ namespace Shine.Suggestion
         private static Guid _paneGuid =
             new Guid("D2E3747C-1234-ABCD-5678-0123456789AB");
 
+        private static readonly Regex _headerRegex
+            = new Regex(@"^\s*(if|for|while|do|foreach|switch)\b", RegexOptions.Compiled);
+
         private object? _currentSession;
         private int? _commitOriginPos;          // Tab 押下時の BufferPosition
         private int _commitOriginVSpaces;       // Tab 押下時の VirtualSpaces
@@ -96,11 +99,14 @@ $"#Context\n{ctx}");
         /* =====================================================================
                               Tab → VS がコミットしなければフォールバック
         =====================================================================*/
+        /// <summary>
+        /// Tab → VS がコミットしなければフォールバック
+        /// </summary>
         internal void FallbackInsertIfNeeded()
         {
             if (_commitOriginPos is not int origin) return;
 
-            // VS がコミット済みならキャレットは右へ進んでいる
+            // 既にコミット済みならフォールバック不要
             if (_view.Caret.Position.BufferPosition > origin)
             {
                 MoveCaretTo(origin + _commitOriginVSpaces);
@@ -108,26 +114,41 @@ $"#Context\n{ctx}");
                 return;
             }
 
-            var raw = LastProposalText;
-            if (string.IsNullOrEmpty(raw)) { _commitOriginPos = null; return; }
+            // FullProposalText（全文）と LastProposalText（トリム後）を取得
+            _view.Properties.TryGetProperty<string>("Shine.FullProposalText", out var full);
+            var trimmed = LastProposalText;
 
-            /* ── インデント計算 ─────────────────────────── */
+            // 条件分岐ヘッダーで始まる提案なら全文、それ以外はトリム後だけを raw に使う
+            string raw;
+            if (!string.IsNullOrEmpty(full) && _headerRegex.IsMatch(full))
+            {
+                raw = full;        // if/while/... のブロック提案は全文
+            }
+            else if (!string.IsNullOrEmpty(trimmed))
+            {
+                raw = trimmed;     // それ以外はトリム後ステートメント
+            }
+            else
+            {
+                _commitOriginPos = null;
+                return;
+            }
+
+            // インデント再調整＆挿入
             var snap = _view.TextSnapshot;
             var line = snap.GetLineFromPosition(origin);
             string realIndent = snap.GetText(line.Start.Position, origin - line.Start.Position);
             string virtualIndent = new string(' ', _commitOriginVSpaces);
 
-            /* ── インデント付け直し ＆ 挿入 ───────────────── */
             string fixedTxt = ReindentWithCaretIndent(raw, realIndent, virtualIndent);
-
             using (var edit = _view.TextBuffer.CreateEdit())
             {
                 edit.Insert(origin, fixedTxt);
                 edit.Apply();
             }
 
-            /* ── キャレットを「コード先頭」へ移動 ──────────── */
-            MoveCaretTo(origin + _commitOriginVSpaces);   // ← Home キー 1 回分
+            // キャレット位置を行頭に戻し、Tab文字が残っていれば削除
+            MoveCaretTo(origin + _commitOriginVSpaces);
             RemoveTabIfExists(origin);
             _commitOriginPos = null;
         }
