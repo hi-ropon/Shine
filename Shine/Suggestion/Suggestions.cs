@@ -1,8 +1,6 @@
-﻿// ────────────────────────────────────────────────
-//  ファイル名: Suggestions.cs
-//  説明: IntelliCode (VS 17.10+) の内部 API をリフレクションで呼び出し、
+﻿// ファイル名: Suggestions.cs
+// 説明: IntelliCode (VS 17.10+) の内部 API をリフレクションで呼び出し、
 //       ゴーストテキスト（インライン補完）を表示するユーティリティ。
-// ────────────────────────────────────────────────
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Language.Proposals;
 using Microsoft.VisualStudio.Shell;
@@ -10,6 +8,7 @@ using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -72,18 +71,18 @@ namespace Shine.Suggestion
             // → ① フル提案テキストをプロパティに保存
             view.Properties["Shine.FullProposalText"] = ghostText;
 
-            // ① ProposalCollection 生成（表示拒否を避けるため 3 行・240 文字にトリム）
-            ghostText = TrimSuggestion(ghostText);
-            if (string.IsNullOrEmpty(ghostText))
+            // ① ゴーストテキスト表示用に 3 行・240 文字へトリム
+            var displayText = TrimSuggestion(ghostText, limitToThreeLines: true);
+            if (string.IsNullOrEmpty(displayText))
             {
                 Log("[Suggestions] 空行または改行のみのため提案せず。");
                 return;
             }
 
-            // → ③ トリム後提案をプロパティに保存
-            view.Properties["Shine.LastProposalText"] = ghostText;
+            // → ③ トリム済みゴーストテキストをプロパティに保存
+            view.Properties["Shine.LastProposalText"] = displayText;
 
-            var proposals = Proposals.Create(view, ghostText, position);
+            var proposals = Proposals.Create(view, displayText, position);
             if (proposals.Proposals.Count == 0)
             {
                 Log("[Suggestions] Proposal を生成できませんでした。");
@@ -131,7 +130,7 @@ namespace Shine.Suggestion
 
             manager.SetCurrentSession(session);
 
-            view.Properties["Shine.LastProposalText"] = ghostText;
+            view.Properties["Shine.LastProposalText"] = displayText;
 
             var prop = proposals.Proposals.First();
             await ((dynamic)session).DisplayProposalAsync(prop, CancellationToken.None);
@@ -143,70 +142,84 @@ namespace Shine.Suggestion
                    .FirstOrDefault(kv => kv.Value?.GetType().Name.Contains("InlineCompletionsInstance") == true)
                    .Value;
 
-        /// <summary>
-        /// ゴーストテキストを最大3行に制限し、
-        /// 末尾に余分な閉じ括弧 '}' がある場合は削除した上で、
-        /// 先頭行が条件分岐なら1ブロックステートメントのみ、
-        /// それ以外は1ステートメントのみ抽出します。
-        /// </summary>
-        private static string TrimSuggestion(string text)
-        {
-            // 1. 行数を最大3行に制限
-            var lines = text.Replace("\r\n", "\n").Split('\n').ToList();
-            var limitedLines = lines.Take(3).ToList();
+        /* ================================================================
+               TrimSuggestion(…) ― 3 行制限の有無をパラメータで切替
+           ================================================================ */
+        internal static string TrimSuggestion(string text) => TrimSuggestion(text, limitToThreeLines: true);
 
-            // 2. 限定後に余分な閉じ括弧があれば取り除く
-            int openCount = limitedLines.Sum(l => l.Count(c => c == '{'));
-            int closeCount = limitedLines.Sum(l => l.Count(c => c == '}'));
-            while (limitedLines.Count > 0 && closeCount > openCount)
+        /// <summary>
+        /// ゴーストテキストを最大3行に制限するか選択し、
+        /// １ステートメントまたは１ブロックステートメントのみを抽出します。
+        /// </summary>
+        internal static string TrimSuggestion(string text, bool limitToThreeLines)
+        {
+            // 1. 改行コード統一→行リスト化
+            var lines = text.Replace("\r\n", "\n").Split('\n').ToList();
+
+            // 1‑b. 表示モードのときだけ 3 行に制限
+            if (limitToThreeLines)
+                lines = lines.Take(3).ToList();
+
+            // 2. 末尾の余分な '}' を除去して括弧のバランスを調整
+            int openCount = lines.Sum(l => l.Count(c => c == '{'));
+            int closeCount = lines.Sum(l => l.Count(c => c == '}'));
+            while (lines.Count > 0 && closeCount > openCount)
             {
-                var last = limitedLines.Last();
+                var last = lines[^1];
                 int lastClose = last.Count(c => c == '}');
-                // 行全体が単独の '}' または閉じ括弧が多い行なら削除
                 if (last.Trim() == "}" || lastClose > last.Count(c => c == '{'))
                 {
-                    limitedLines.RemoveAt(limitedLines.Count - 1);
+                    lines.RemoveAt(lines.Count - 1);
                     closeCount -= lastClose;
                 }
-                else
-                {
-                    break;
-                }
+                else break;
             }
 
-            var limitedText = string.Join("\n", limitedLines).TrimEnd();
+            var limitedText = string.Join("\n", lines).TrimEnd();
 
-            // 3. 先頭行が条件分岐(if/for/while/foreach/switch)の場合は1ブロックステートメントのみ
-            var headerPattern = @"^\s*(if|for|while|do|foreach|switch)\b";
+            // 3. 先頭が if/for/… のヘッダーならブロック全体を、そうでなければ最初のセミコロンまで
+            const string headerPattern = @"^\s*(if|for|while|do|foreach|switch)\b";
             string result;
             if (Regex.IsMatch(limitedText, headerPattern))
             {
-                int braceIndex = limitedText.IndexOf('{');
-                if (braceIndex >= 0)
+                int braceStart = limitedText.IndexOf('{');
+                if (braceStart >= 0)
                 {
-                    // 最初のブレース以降の最初のセミコロンまでを含める
-                    int innerSemi = limitedText.IndexOf(';', braceIndex + 1);
-                    result = innerSemi >= 0
-                        ? limitedText.Substring(0, innerSemi + 1)
-                        : limitedText;
+                    int depth = 0, endIndex = -1;
+                    for (int i = braceStart; i < limitedText.Length; i++)
+                    {
+                        if (limitedText[i] == '{') depth++;
+                        else if (limitedText[i] == '}')
+                        {
+                            depth--;
+                            if (depth == 0)
+                            {
+                                endIndex = i;
+                                break;
+                            }
+                        }
+                    }
+                    result = endIndex >= 0
+                        ? limitedText.Substring(0, endIndex + 1)
+                        : limitedText; // 括弧不整合なら全文返す
                 }
                 else
                 {
-                    int semi = limitedText.IndexOf(';');
+                    var semi = limitedText.IndexOf(';');
                     result = semi >= 0 ? limitedText.Substring(0, semi + 1) : limitedText;
                 }
             }
             else
             {
-                // 4. それ以外は最初のステートメントのみ
-                int semi = limitedText.IndexOf(';');
+                var semi = limitedText.IndexOf(';');
                 result = semi >= 0 ? limitedText.Substring(0, semi + 1) : limitedText;
             }
 
-            // 5. 文字数上限 240 字に収める
-            return result.Length > 240
-                ? result.Substring(0, 240)
-                : result;
+            // 4. 表示モードのときのみ 240 文字に収める
+            if (limitToThreeLines && result.Length > 240)
+                result = result.Substring(0, 240);
+
+            return result;
         }
 
         // ctor 互換生成

@@ -9,6 +9,8 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace Shine.Suggestion
 {
@@ -68,7 +70,7 @@ namespace Shine.Suggestion
             int caret = _view.Caret.Position.BufferPosition.Position;
             string ctx = GetContext(_view.TextSnapshot, caret);
             if (string.IsNullOrWhiteSpace(ctx)) return;
-            
+
             string reply;
             try
             {
@@ -106,25 +108,27 @@ $"#Context\n{ctx}");
         {
             if (_commitOriginPos is not int origin) return;
 
-            // 既にコミット済みならフォールバック不要
+            // 既にコミット済みなら位置を戻して終了
             if (_view.Caret.Position.BufferPosition > origin)
             {
                 MoveCaretTo(origin + _commitOriginVSpaces);
-                // セッション情報をクリア
                 SetCurrentSession(null);
                 _commitOriginPos = null;
                 return;
             }
 
-            // トリム済みテキストのみを取得
-            var trimmed = LastProposalText;
-            if (string.IsNullOrEmpty(trimmed))
+            if (!_view.Properties.TryGetProperty<string>("Shine.FullProposalText", out var suggestion) || string.IsNullOrWhiteSpace(suggestion))
             {
                 SetCurrentSession(null);
                 _commitOriginPos = null;
                 return;
             }
-            string raw = trimmed;
+
+            // 1. １ステートメント／ブロックを抽出（行数制限なし）
+            var snippet = Suggestions.TrimSuggestion(suggestion, limitToThreeLines: false);
+
+            // 2. Roslyn で不足分を自動補完
+            var fixedSnippet = FixSyntax(snippet);
 
             // インデント再調整＆挿入
             var snap = _view.TextSnapshot;
@@ -132,7 +136,7 @@ $"#Context\n{ctx}");
             string realIndent = snap.GetText(line.Start.Position, origin - line.Start.Position);
             string virtualIndent = new string(' ', _commitOriginVSpaces);
 
-            string fixedTxt = ReindentWithCaretIndent(raw, realIndent, virtualIndent);
+            string fixedTxt = ReindentWithCaretIndent(fixedSnippet, realIndent, virtualIndent);
             using (var edit = _view.TextBuffer.CreateEdit())
             {
                 edit.Insert(origin, fixedTxt);
@@ -212,7 +216,7 @@ $"#Context\n{ctx}");
         private static string GetContext(ITextSnapshot snap, int caret)
         {
             const int MaxLinesEachSide = 120;   // 前後それぞれの行数上限
-            const int MaxChars = 4000;  // 文字数上限
+            const int MaxChars = 4000;          // 文字数上限
 
             var caretLine = snap.GetLineFromPosition(caret);
             int startLine = Math.Max(0, caretLine.LineNumber - MaxLinesEachSide);
@@ -247,6 +251,46 @@ $"#Context\n{ctx}");
                 aiLines.RemoveAt(0);
 
             return string.Join("\n", aiLines);
+        }
+
+        /// <summary>
+        /// Roslyn の構文解析結果を見て、
+        /// ・末尾のセミコロン不足 → 「;」を追加  
+        /// ・中括弧の閉じ忘れ → 「}」を追加  
+        /// を試み、再パースしてエラーがなければ返します。
+        /// </summary>
+        private static string FixSyntax(string code)
+        {
+            // まずはそのままパース
+            var stmt = SyntaxFactory.ParseStatement(code);
+            var errs = stmt.GetDiagnostics()
+                          .Where(d => d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+                          .ToList();
+            if (!errs.Any())
+                return code;
+
+            // トリムして末尾文字確認
+            var fixedCode = code.TrimEnd();
+            // 文末がセミコロンでも閉じ中括弧でもないならセミコロン追加
+            if (!fixedCode.EndsWith(";") && !fixedCode.EndsWith("}"))
+                fixedCode += ";";
+
+            // 中括弧のバランスを調整
+            int open = fixedCode.Count(c => c == '{');
+            int close = fixedCode.Count(c => c == '}');
+            while (open > close)
+            {
+                fixedCode += "}";
+                close++;
+            }
+
+            // 再パースしてエラーが消えていれば補完結果を返却
+            var reparsed = SyntaxFactory.ParseStatement(fixedCode);
+            if (!reparsed.GetDiagnostics().Any(d => d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error))
+                return fixedCode;
+
+            // それでもエラーが残るなら、元の code を返す（もしくは空文字扱い）
+            return code;
         }
 
 #if DEBUG
