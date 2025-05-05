@@ -65,7 +65,7 @@ namespace Shine.Suggestion
             int caret = _view.Caret.Position.BufferPosition.Position;
             string ctx = GetContext(_view.TextSnapshot, caret);
             if (string.IsNullOrWhiteSpace(ctx)) return;
-
+            
             string reply;
             try
             {

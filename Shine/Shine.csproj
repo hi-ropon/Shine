@@ -91,6 +91,7 @@
     <Compile Include="ShinePackage.cs" />
     <Compile Include="ShowAiChatCommand.cs" />
     <Compile Include="Suggestion\CodeSuggestionListener.cs" />
+    <Compile Include="Suggestion\GuidListAndCmdIDList.cs" />
     <Compile Include="Suggestion\InlineSuggestionCommandFilter.cs" />
     <Compile Include="Suggestion\InlineSuggestionManager.cs" />
     <Compile Include="Suggestion\Proposals.cs" />

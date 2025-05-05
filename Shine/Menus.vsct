@@ -1,7 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable"
+              xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <Extern href="stdidcmd.h"/>
   <Extern href="vsshlids.h"/>
+  <!-- コマンド定義 -->
   <Commands package="guidShinePackage">
     <Groups>
       <Group guid="guidShinePackageCmdSet" id="MyMenuGroup" priority="0x0600">
@@ -9,19 +11,41 @@
       </Group>
     </Groups>
     <Buttons>
+      <!-- Chat ツールウィンドウ起動コマンド -->
       <Button guid="guidShinePackageCmdSet" id="ShowAiChatCommand" priority="0x0100" type="Button">
         <Parent guid="guidShinePackageCmdSet" id="MyMenuGroup" />
         <Strings>
           <ButtonText>Shine(Code Assistant Tool)</ButtonText>
         </Strings>
       </Button>
+      <!-- Suggestion トリガーコマンド -->
+      <Button guid="guidShinePackageCmdSet" id="TriggerSuggestionCommand" priority="0x0101" type="Button">
+        <Parent guid="guidShinePackageCmdSet" id="MyMenuGroup" />
+        <Strings>
+          <ButtonText>Trigger Suggestion</ButtonText>
+        </Strings>
+      </Button>
     </Buttons>
   </Commands>
+
+  <!-- キーバインド定義 -->
+  <KeyBindings>
+    <!-- Alt+@ を TriggerSuggestionCommand にバインド -->
+    <KeyBinding guid="guidShinePackageCmdSet"
+                id="TriggerSuggestionCommand"
+                editor="guidVSStd97"
+                key1="K"
+                mod1="ALT" />
+  </KeyBindings>
+
+  <!-- GUID/ID シンボル定義 -->
   <Symbols>
     <GuidSymbol name="guidShinePackage" value="{B1234567-89AB-CDEF-0123-456789ABCDEF}" />
     <GuidSymbol name="guidShinePackageCmdSet" value="{D1234567-89AB-CDEF-0123-456789ABCDEF}">
-      <IDSymbol name="MyMenuGroup" value="0x1020" />
-      <IDSymbol name="ShowAiChatCommand" value="0x0100" />
+      <IDSymbol name="MyMenuGroup"               value="0x1020" />
+      <IDSymbol name="ShowAiChatCommand"         value="0x0100" />
+      <!-- Suggestion トリガーのID を追加 -->
+      <IDSymbol name="TriggerSuggestionCommand"  value="0x0101" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

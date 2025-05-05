@@ -137,10 +137,54 @@ namespace Shine.Suggestion
                    .FirstOrDefault(kv => kv.Value?.GetType().Name.Contains("InlineCompletionsInstance") == true)
                    .Value;
 
+        /// <summary>
+        /// ゴーストテキストを最大3行・240文字にトリムし、
+        /// １ステートメントまたは１コードブロックのみ抽出します。
+        /// </summary>
         private static string TrimSuggestion(string text)
         {
-            var first = text.Split('\n').FirstOrDefault()?.TrimEnd() ?? "";
-            return first.Length > 80 ? first.Substring(0, 80) : first;
+            // 1. 行数を最大3行に制限
+            var lines = text.Split('\n');
+            var limitedLines = lines.Take(3);
+            var limitedText = string.Join("\n", limitedLines).TrimEnd();
+
+            string result;
+
+            // 2. コードブロックが含まれる場合は最初の {…} を抽出
+            if (limitedText.Contains("{"))
+            {
+                int braceDepth = 0;
+                int endPos = -1;
+                for (int i = 0; i < limitedText.Length; i++)
+                {
+                    if (limitedText[i] == '{') braceDepth++;
+                    else if (limitedText[i] == '}')
+                    {
+                        braceDepth--;
+                        if (braceDepth == 0)
+                        {
+                            endPos = i;
+                            break;
+                        }
+                    }
+                }
+                result = endPos >= 0
+                    ? limitedText.Substring(0, endPos + 1)
+                    : limitedText;
+            }
+            else
+            {
+                // 3. それ以外は最初のセミコロン付きステートメントのみ
+                int idx = limitedText.IndexOf(';');
+                result = idx >= 0
+                    ? limitedText.Substring(0, idx + 1)
+                    : limitedText;
+            }
+
+            // 4. 文字数上限 240 字に収める
+            return result.Length > 240
+                ? result.Substring(0, 240)
+                : result;
         }
 
         // ctor 互換生成

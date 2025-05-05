@@ -1,18 +1,16 @@
-﻿// --------------- InlineSuggestionCommandFilter.cs ---------------
+﻿// ファイル名: InlineSuggestionCommandFilter.cs
+using System;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
-using System;
-using System.Threading.Tasks;
+using Shine;
 
 namespace Shine.Suggestion
 {
-    /// <summary>
-    /// Tab → VS / Copilot へバブル → 30 ms 待機 → フォールバック  
-    /// Enter → AI へ補完リクエスト
-    /// </summary>
     internal sealed class InlineSuggestionCommandFilter : IOleCommandTarget
     {
         private readonly IWpfTextView _view;
@@ -28,18 +26,44 @@ namespace Shine.Suggestion
         public void Attach(IVsTextView adapter)
             => adapter.AddCommandFilter(this, out _next);
 
-        public int QueryStatus(ref Guid pg, uint c, OLECMD[] cmds, IntPtr pTxt)
-            => _next!.QueryStatus(ref pg, c, cmds, pTxt);
-
-        public int Exec(ref Guid pg, uint id, uint opt, IntPtr inPtr, IntPtr outPtr)
+        // ← ここを更新
+        public int QueryStatus(ref Guid pguidCmdGroup, uint cCmds, OLECMD[] prgCmds, IntPtr pCmdText)
         {
-            /* ───────── Tab ───────── */
-            if (pg == VSConstants.VSStd2K &&
-                id == (uint)VSConstants.VSStd2KCmdID.TAB &&
+            // カスタムコマンド（Alt+K → TriggerSuggestionCommand）をサポート＆有効化
+            if (pguidCmdGroup == GuidList.guidShinePackageCmdSet)
+            {
+                for (int i = 0; i < cCmds; i++)
+                {
+                    if (prgCmds[i].cmdID == PkgCmdIDList.triggerSuggestionCommand)
+                    {
+                        prgCmds[i].cmdf = (uint)(
+                            OLECMDF.OLECMDF_SUPPORTED |
+                            OLECMDF.OLECMDF_ENABLED
+                        );
+                        return VSConstants.S_OK;
+                    }
+                }
+            }
+            // Tab やその他は既存に委譲
+            return _next!.QueryStatus(ref pguidCmdGroup, cCmds, prgCmds, pCmdText);
+        }
+
+        public int Exec(ref Guid pguidCmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
+        {
+            // ───────── TriggerSuggestionCommand（Alt+@）─────────
+            if (pguidCmdGroup == GuidList.guidShinePackageCmdSet &&
+                nCmdID == PkgCmdIDList.triggerSuggestionCommand)
+            {
+                _ = Task.Run(() => _manager.OnEnterAsync());
+            }
+
+            // ───────── Tab （フォールバック挿入）─────────
+            if (pguidCmdGroup == VSConstants.VSStd2K &&
+                nCmdID == (uint)VSConstants.VSStd2KCmdID.TAB &&
                 _manager.HasActiveSession)
             {
-                _manager.RememberCaret();                     // 押下前をメモ
-                var hr = _next!.Exec(ref pg, id, opt, inPtr, outPtr);
+                _manager.RememberCaret();
+                var hr = _next!.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
 
                 ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
                 {
@@ -51,14 +75,8 @@ namespace Shine.Suggestion
                 return hr;
             }
 
-            /* ───────── Enter ───────── */
-            if (pg == VSConstants.VSStd2K &&
-                id == (uint)VSConstants.VSStd2KCmdID.RETURN)
-            {
-                _ = Task.Run(() => _manager.OnEnterAsync());
-            }
-
-            return _next!.Exec(ref pg, id, opt, inPtr, outPtr);
+            // その他は既存に委譲
+            return _next!.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
         }
     }
 }
