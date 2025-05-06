@@ -10,6 +10,9 @@ using System.Collections.Generic;
 using Microsoft.VisualStudio.Shell;
 using System.Diagnostics;
 using System.Windows.Media;
+using Microsoft.VisualStudio.Text.Classification;
+using Microsoft.VisualStudio.ComponentModelHost;
+using Microsoft.VisualStudio.Language.StandardClassification;
 
 namespace Shine.Suggestion
 {
@@ -66,43 +69,83 @@ namespace Shine.Suggestion
             private readonly IAdornmentLayer _layer;
             private readonly TextBlock _marker;
 
+            [Import] private IClassificationFormatMapService _formatMapService = null!;
+            [Import] private IClassificationTypeRegistryService _typeRegistry = null!;
             internal AdornmentContext(IWpfTextView view)
             {
                 _view = view;
                 _layer = view.GetAdornmentLayer(layerName);
 
+                var model = (IComponentModel)Package.GetGlobalService(typeof(SComponentModel));
+                model.DefaultCompositionService.SatisfyImportsOnce(this);
+
+                // コメント分類を取得
+                var commentType = _typeRegistry.GetClassificationType(PredefinedClassificationTypeNames.Comment);
+                var formatMap = _formatMapService.GetClassificationFormatMap(view);
+                var textProps = formatMap.GetTextProperties(commentType);
+
+                // コメント色と、フォントサイズを取得
+                var commentBrush = textProps.ForegroundBrush;
+                double fontSize = textProps.FontRenderingEmSize;
+
                 _marker = new TextBlock
                 {
                     Text = "Thinking…",
-                    FontSize = 12,
-                    Foreground = Brushes.Yellow,
-                    Background = Brushes.Black,
-                    Opacity = 0.6
+                    FontSize = fontSize,
+                    Foreground = commentBrush,
+                    Background = null,
+                    Opacity = 1.0
                 };
             }
 
             internal void ShowMarker()
             {
                 _layer.RemoveAllAdornments();
+
                 var caret = _view.Caret.Position.BufferPosition;
                 var span = new SnapshotSpan(caret, 0);
-                var geom = _view.TextViewLines.GetMarkerGeometry(span);
+
+                // 通常のマーカー位置取得を試みる
+                var geom = _view.TextViewLines.GetMarkerGeometry(span)
+                         ?? CreateFallbackGeometry(caret);
+
                 if (geom == null)
+                    return;
+
+                // キャレットの仮想空白まで含めたX座標を計算
+                double left = geom.Bounds.Left;
+                int vs = _view.Caret.Position.VirtualSpaces;
+                if (vs > 0)
                 {
+                    // フォールバック時に tbWidth を取得できるよう一時保持しておく
                     var lineView = _view.TextViewLines.GetTextViewLineContainingBufferPosition(caret);
                     if (lineView != null)
                     {
                         var tb = lineView.GetCharacterBounds(caret);
-                        // ← TextBounds には Bounds プロパティがないので左上＋幅高さで矩形生成
-                        var rect = new Rect(tb.Left, tb.Top, tb.Width, tb.Height);  // ← 修正箇所
-                        geom = new RectangleGeometry(rect);
+                        left += vs * tb.Width;
                     }
                 }
-                if (geom == null) return;
-                Canvas.SetLeft(_marker, geom.Bounds.Left);
-                Canvas.SetTop(_marker, geom.Bounds.Bottom + 2);
-                _layer.AddAdornment(AdornmentPositioningBehavior.TextRelative, span, null, _marker, null);
-                Debug.WriteLine("Thinking marker added.");
+
+                Canvas.SetLeft(_marker, left);
+                Canvas.SetTop(_marker, geom.Bounds.Top);
+
+                _layer.AddAdornment(
+                    AdornmentPositioningBehavior.TextRelative,
+                    span, null, _marker, null);
+
+                Debug.WriteLine($"Thinking marker added at {left},{geom.Bounds.Top}");
+            }
+
+            private Geometry CreateFallbackGeometry(SnapshotPoint caret)
+            {
+                var lineView = _view.TextViewLines.GetTextViewLineContainingBufferPosition(caret);
+                if (lineView != null)
+                {
+                    var tb = lineView.GetCharacterBounds(caret);
+                    var rect = new Rect(tb.Left, tb.Top, tb.Width, tb.Height);
+                    return new RectangleGeometry(rect);
+                }
+                return null;
             }
 
             internal void RemoveMarker() => _layer.RemoveAllAdornments();

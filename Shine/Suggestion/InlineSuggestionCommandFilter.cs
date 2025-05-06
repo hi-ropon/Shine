@@ -26,7 +26,6 @@ namespace Shine.Suggestion
         public void Attach(IVsTextView adapter)
             => adapter.AddCommandFilter(this, out _next);
 
-        // ← ここを更新
         public int QueryStatus(ref Guid pguidCmdGroup, uint cCmds, OLECMD[] prgCmds, IntPtr pCmdText)
         {
             // カスタムコマンド（Alt+K → TriggerSuggestionCommand）をサポート＆有効化
