@@ -89,9 +89,9 @@ namespace Shine
             set { _chatHistoryCount = Math.Max(0, Math.Min(10, value)); }
         }
 
-        [Category("General")]
-        [DisplayName("Enable Inline Suggestion")]
-        [Description("コード入力中にゴーストテキストで AI サジェスチョンを表示します")]
+        [Category("コードサジェスチョン")]
+        [DisplayName("インライン サジェスチョン 有効")]
+        [Description("エディタ上でAlt + Kキーを押すと、ゴーストテキストで コード サジェスチョンを表示します")]
         public bool EnableInlineSuggestion { get; set; } = true;
 
 
