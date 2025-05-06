@@ -30,6 +30,8 @@ namespace Shine
         [Category("OpenAI")]
         [DisplayName("API キー")]
         [Description("OpenAI API の API キーを入力します。")]
+        [TypeConverter(typeof(ApiKeyTypeConverter))]
+        [Editor(typeof(ApiKeyEditor), typeof(System.Drawing.Design.UITypeEditor))]
         public string OpenAIApiKey { get; set; } = "sk-";
 
         [Category("OpenAI")]
@@ -68,6 +70,8 @@ namespace Shine
         [Category("Azure OpenAI")]
         [DisplayName("API キー")]
         [Description("Azure OpenAI の API キーを入力します。")]
+        [TypeConverter(typeof(ApiKeyTypeConverter))]
+        [Editor(typeof(ApiKeyEditor), typeof(System.Drawing.Design.UITypeEditor))]
         public string AzureOpenAIApiKey { get; set; } = "azure-api-key";
 
         [Category("Azure OpenAI")]

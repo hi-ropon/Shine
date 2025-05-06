@@ -67,6 +67,8 @@
     <Compile Include="ClientServices\OpenAI\O4ChatModelProcessor.cs" />
     <Compile Include="GitServices\GitDiffHelper.cs" />
     <Compile Include="GitServices\GitDiffSummarizer.cs" />
+    <Compile Include="Helpers\ApiKeyEditor.cs" />
+    <Compile Include="Helpers\ApiKeyTypeConverter.cs" />
     <Compile Include="Helpers\BrushHelper.cs" />
     <Compile Include="Chat\ChatHistoryDocument.cs" />
     <Compile Include="Chat\ChatMessageFormatter.cs" />
