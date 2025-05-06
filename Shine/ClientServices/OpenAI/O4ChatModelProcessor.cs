@@ -1,8 +1,6 @@
-﻿using System.Text.Json;
-using System.Threading.Tasks;
-using System.ClientModel;
-using System;
+﻿using System.Threading.Tasks;
 using OpenAI.Chat;
+using System.Collections.Generic;
 
 namespace Shine
 {
@@ -11,9 +9,8 @@ namespace Shine
     /// </summary>
     public class O4ChatModelProcessor : IChatModelProcessor
     {
-        private readonly ChatClient _client;
-        private readonly string _model;
-        private readonly string _reasoningEffort;
+        private readonly ChatClient _chatClient;
+        private readonly ChatCompletionOptions _completionOptions;
 
         /// <summary>
         /// O4ChatModelProcessor クラスのコンストラクタ
@@ -21,11 +18,13 @@ namespace Shine
         /// <param name="client"></param>
         /// <param name="model"></param>
         /// <param name="reasoningEffort"></param>
-        public O4ChatModelProcessor(ChatClient client, string model, string reasoningEffort)
+        public O4ChatModelProcessor(ChatClient chatClient)
         {
-            _client = client;
-            _model = model;
-            _reasoningEffort = reasoningEffort;
+            _chatClient = chatClient;
+            _completionOptions = new ChatCompletionOptions
+            {
+                ReasoningEffortLevel = "high",
+            };
         }
 
         /// <summary>
@@ -35,39 +34,23 @@ namespace Shine
         /// <returns></returns>
         public async Task<string> GetChatReplyAsync(string userMessage)
         {
-            string json = $@"
-{{
-    ""model"": ""{_model}"",
-    ""temperature"": 1.0,
-    ""reasoning_effort"": ""{_reasoningEffort}"",
-    ""messages"": [
-        {{
-            ""role"": ""user"",
-            ""content"": ""{EscapeJson(userMessage)}""
-        }}
-    ]
-}}";
-            BinaryData input = BinaryData.FromString(json);
-            using var content = BinaryContent.Create(input);
-            ClientResult result = await _client.CompleteChatAsync(content);
-            BinaryData output = result.GetRawResponse().Content;
-            using var doc = JsonDocument.Parse(output.ToString());
-            string message = doc.RootElement
-                .GetProperty("choices")[0]
-                .GetProperty("message")
-                .GetProperty("content")
-                .GetString();
-            return message;
-        }
+            string systemMessage =
+                "#役割\n" +
+                "　あなたは優秀なプログラミング支援 AI です。\n" +
+                "プログラム単位でコードブロックで出力し、日本語で回答してください。\n" +
+                "各プログラムは先頭と末尾を、\n" +
+                "```csharp\n" +
+                "```\n" +
+                "のように各言語のコードフェンスで囲ってください。";
 
-        /// <summary>
-        /// JSON 文字列をエスケープする
-        /// </summary>
-        /// <param name="input"></param>
-        /// <returns></returns>
-        private static string EscapeJson(string input)
-        {
-            return JsonSerializer.Serialize(input).Trim('\"');
+            var messages = new List<OpenAI.Chat.ChatMessage>
+            {
+                new SystemChatMessage(systemMessage),
+                new UserChatMessage(userMessage),
+            };
+
+            var completion = await _chatClient.CompleteChatAsync(messages, _completionOptions);
+            return completion.Value.Content[0].Text;
         }
     }
 }

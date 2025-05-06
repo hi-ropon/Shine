@@ -610,11 +610,11 @@ namespace Shine
             {
                 if (options.Provider == OpenAiProvider.OpenAI)
                 {
-                    chatService = new OpenAiClientService(options.OpenAIApiKey, "gpt-4o-mini", options.Temperature);
+                    chatService = new OpenAiClientService(options.OpenAIApiKey, options.OpenAIModelName, options.Temperature);
                 }
                 else if (options.Provider == OpenAiProvider.AzureOpenAI)
                 {
-                    chatService = new AzureOpenAiClientService(options.AzureOpenAIEndpoint, options.AzureOpenAIApiKey, "gpt-4o-mini", options.Temperature);
+                    chatService = new AzureOpenAiClientService(options.AzureOpenAIEndpoint, options.AzureOpenAIApiKey, options.AzureDeploymentName, options.Temperature);
                 }
                 else
                 {
