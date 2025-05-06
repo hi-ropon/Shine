@@ -146,13 +146,14 @@ namespace Shine.Suggestion
         /// <summary>
         /// ゴーストテキストを最大3行に制限するか選択し、
         /// １ステートメントまたは１ブロックステートメントのみを抽出します。
+        /// if-else ブロックがあれば else 部分まで含めて返します。
         /// </summary>
         internal static string TrimSuggestion(string text, bool limitToThreeLines)
         {
             // 1. 改行コード統一→行リスト化
             var lines = text.Replace("\r\n", "\n").Split('\n').ToList();
 
-            // 1‑b. 表示モードのときだけ 3 行に制限
+            // 1-b. 表示モードのときだけ 3 行に制限
             if (limitToThreeLines)
                 lines = lines.Take(3).ToList();
 
@@ -173,7 +174,7 @@ namespace Shine.Suggestion
 
             var limitedText = string.Join("\n", lines).TrimEnd();
 
-            // 3. 先頭が if/for/… のヘッダーならブロック全体を、そうでなければ最初のセミコロンまで
+            // 3. 先頭が if/for/… のヘッダーならブロック全体を、else-ifチェーンがあれば最後まで含める
             const string headerPattern = @"^\s*(if|for|while|do|foreach|switch)\b";
             string result;
             if (Regex.IsMatch(limitedText, headerPattern))
@@ -181,7 +182,8 @@ namespace Shine.Suggestion
                 int braceStart = limitedText.IndexOf('{');
                 if (braceStart >= 0)
                 {
-                    int depth = 0, endIndex = -1;
+                    // 最初の if ブロックを閉じる '}' を探す
+                    int depth = 0, firstEnd = -1;
                     for (int i = braceStart; i < limitedText.Length; i++)
                     {
                         if (limitedText[i] == '{') depth++;
@@ -190,23 +192,73 @@ namespace Shine.Suggestion
                             depth--;
                             if (depth == 0)
                             {
-                                endIndex = i;
+                                firstEnd = i;
                                 break;
                             }
                         }
                     }
-                    result = endIndex >= 0
-                        ? limitedText.Substring(0, endIndex + 1)
-                        : limitedText; // 括弧不整合なら全文返す
+
+                    if (firstEnd >= 0)
+                    {
+                        // else-if / else チェーンの終端を探す
+                        int chainEnd = firstEnd;
+                        int scanPos = firstEnd + 1;
+                        while (scanPos < limitedText.Length)
+                        {
+                            // 先頭位置から "else" または "else if" を正規表現で検索
+                            var match = Regex.Match(limitedText.Substring(scanPos), @"^\s*(else(\s+if)?)\b", RegexOptions.Multiline);
+                            if (!match.Success) break;
+
+                            int keywordPos = scanPos + match.Index;
+                            // ブロック開始の '{' を探す
+                            int bracePos = limitedText.IndexOf('{', keywordPos);
+                            if (bracePos < 0)
+                            {
+                                // ブロックなしの else（珍しいパターン）は宣言末尾まで
+                                chainEnd = keywordPos + match.Length;
+                                scanPos = chainEnd;
+                                continue;
+                            }
+                            // 対応する '}' を探す
+                            depth = 0;
+                            int thisEnd = -1;
+                            for (int i = bracePos; i < limitedText.Length; i++)
+                            {
+                                if (limitedText[i] == '{') depth++;
+                                else if (limitedText[i] == '}')
+                                {
+                                    depth--;
+                                    if (depth == 0)
+                                    {
+                                        thisEnd = i;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (thisEnd < 0) break;
+
+                            chainEnd = thisEnd;
+                            scanPos = thisEnd + 1;
+                        }
+
+                        result = limitedText.Substring(0, chainEnd + 1);
+                    }
+                    else
+                    {
+                        // 括弧不整合なら全文返す
+                        result = limitedText;
+                    }
                 }
                 else
                 {
+                    // ブレース無しなら最初のセミコロンまで
                     var semi = limitedText.IndexOf(';');
                     result = semi >= 0 ? limitedText.Substring(0, semi + 1) : limitedText;
                 }
             }
             else
             {
+                // if 以外は最初のセミコロンまで
                 var semi = limitedText.IndexOf(';');
                 result = semi >= 0 ? limitedText.Substring(0, semi + 1) : limitedText;
             }

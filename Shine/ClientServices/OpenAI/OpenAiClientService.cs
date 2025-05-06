@@ -20,18 +20,18 @@ namespace Shine
         /// <param name="apiKey"></param>
         /// <param name="model"></param>
         /// <param name="temperature"></param>
-        public OpenAiClientService(string apiKey, string model, float temperature)
+        public OpenAiClientService(string apiKey, string model, float temperature, string reasoningEffort = "high")
         {
             _client = new ChatClient(model, apiKey);
             _model = model;
             _temperature = temperature;
-            _reasoningEffort = "high";
+            _reasoningEffort = reasoningEffort;
 
             _processor = _model switch
             {
                 "o1-mini" => new O1ChatModelProcessor(_client, _model),
                 "o3-mini" => new O3ChatModelProcessor(_client, _model, _reasoningEffort),
-                "o4-mini" => new O4ChatModelProcessor(_client),
+                "o4-mini" => new O4ChatModelProcessor(_client, _reasoningEffort),
                 _ => new DefaultChatModelProcessor(_client, _model, _temperature)
             };
         }

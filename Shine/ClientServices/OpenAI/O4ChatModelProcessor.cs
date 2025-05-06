@@ -18,12 +18,12 @@ namespace Shine
         /// <param name="client"></param>
         /// <param name="model"></param>
         /// <param name="reasoningEffort"></param>
-        public O4ChatModelProcessor(ChatClient chatClient)
+        public O4ChatModelProcessor(ChatClient chatClient, string reasoningEffort = "high")
         {
             _chatClient = chatClient;
             _completionOptions = new ChatCompletionOptions
             {
-                ReasoningEffortLevel = "high",
+                ReasoningEffortLevel = reasoningEffort,
             };
         }
 
