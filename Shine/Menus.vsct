@@ -3,34 +3,53 @@
               xmlns:xs="http://www.w3.org/2001/XMLSchema">
   <Extern href="stdidcmd.h"/>
   <Extern href="vsshlids.h"/>
-  <!-- コマンド定義 -->
+
+  <!--──────────────────────── コマンド定義 ────────────────────────-->
   <Commands package="guidShinePackage">
     <Groups>
+      <!-- ツールメニュー用 -->
       <Group guid="guidShinePackageCmdSet" id="MyMenuGroup" priority="0x0600">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS"/>
       </Group>
+
+      <!-- Error List／コードウィンドウ右クリック用 -->
+      <Group guid="guidShinePackageCmdSet" id="ErrorFixGroup" priority="0x0601">
+        <!-- Error List の行を右クリック -->
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ERRORLIST"/>
+      </Group>
     </Groups>
+
     <Buttons>
-      <!-- Chat ツールウィンドウ起動コマンド -->
+      <!-- Chat ツールウィンドウ起動 -->
       <Button guid="guidShinePackageCmdSet" id="ShowAiChatCommand" priority="0x0100" type="Button">
-        <Parent guid="guidShinePackageCmdSet" id="MyMenuGroup" />
+        <Parent guid="guidShinePackageCmdSet" id="MyMenuGroup"/>
         <Strings>
           <ButtonText>Shine(Code Assistant Tool)</ButtonText>
         </Strings>
       </Button>
-      <!-- Suggestion トリガーコマンド -->
+
+      <!-- Alt+K サジェスチョン -->
       <Button guid="guidShinePackageCmdSet" id="TriggerSuggestionCommand" priority="0x0101" type="Button">
-        <Parent guid="guidShinePackageCmdSet" id="MyMenuGroup" />
+        <Parent guid="guidShinePackageCmdSet" id="MyMenuGroup"/>
         <Strings>
           <ButtonText>Trigger Suggestion</ButtonText>
+        </Strings>
+      </Button>
+
+      <!-- エラー修正を Shine に依頼 -->
+      <Button guid="guidShinePackageCmdSet" id="AskShineFixCommand" priority="0x0200" type="Button">
+        <Parent guid="guidShinePackageCmdSet" id="ErrorFixGroup"/>
+        <Strings>
+          <ButtonText>Shine に質問する</ButtonText>
+          <CommandName>AskShineFixCommand</CommandName>
         </Strings>
       </Button>
     </Buttons>
   </Commands>
 
-  <!-- キーバインド定義 -->
+  <!--──────────────────────── キーバインド ────────────────────────-->
   <KeyBindings>
-    <!-- Alt+@ を TriggerSuggestionCommand にバインド -->
+    <!-- Alt+K -->
     <KeyBinding guid="guidShinePackageCmdSet"
                 id="TriggerSuggestionCommand"
                 editor="guidVSStd97"
@@ -38,14 +57,15 @@
                 mod1="ALT" />
   </KeyBindings>
 
-  <!-- GUID/ID シンボル定義 -->
+  <!--──────────────────────── GUID / ID ────────────────────────-->
   <Symbols>
     <GuidSymbol name="guidShinePackage" value="{B1234567-89AB-CDEF-0123-456789ABCDEF}" />
     <GuidSymbol name="guidShinePackageCmdSet" value="{D1234567-89AB-CDEF-0123-456789ABCDEF}">
-      <IDSymbol name="MyMenuGroup"               value="0x1020" />
-      <IDSymbol name="ShowAiChatCommand"         value="0x0100" />
-      <!-- Suggestion トリガーのID を追加 -->
-      <IDSymbol name="TriggerSuggestionCommand"  value="0x0101" />
+      <IDSymbol name="MyMenuGroup"              value="0x1020" />
+      <IDSymbol name="ErrorFixGroup"            value="0x1021" />
+      <IDSymbol name="ShowAiChatCommand"        value="0x0100" />
+      <IDSymbol name="TriggerSuggestionCommand" value="0x0101" />
+      <IDSymbol name="AskShineFixCommand"       value="0x0102" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

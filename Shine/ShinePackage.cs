@@ -39,6 +39,7 @@ namespace Shine
 
             // ツールウィンドウを表示するコマンドを初期化
             await ShowAiChatCommand.InitializeAsync(this);
+            await AskShineFixCommand.InitializeAsync(this);
 
             // 必要に応じて各モジュールの初期化を実施
             await base.InitializeAsync(cancellationToken, progress);
