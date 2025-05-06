@@ -1,5 +1,4 @@
-﻿// ファイル名: GuidListAndCmdIDList.cs
-using System;
+﻿using System;
 
 namespace Shine
 {

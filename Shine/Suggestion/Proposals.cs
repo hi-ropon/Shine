@@ -1,5 +1,4 @@
-﻿// ファイル名: Proposals.cs
-using Microsoft.VisualStudio.Language.Proposals;
+﻿using Microsoft.VisualStudio.Language.Proposals;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using System.Collections.Generic;

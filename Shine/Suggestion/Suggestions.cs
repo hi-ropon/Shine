@@ -1,14 +1,10 @@
-﻿// ファイル名: Suggestions.cs
-// 説明: IntelliCode (VS 17.10+) の内部 API をリフレクションで呼び出し、
-//       ゴーストテキスト（インライン補完）を表示するユーティリティ。
-using Microsoft.VisualStudio;
+﻿using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Language.Proposals;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
+using Shine.Helpers;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -57,14 +53,14 @@ namespace Shine.Suggestion
 
             if (_inlineCompletionsType == null || _inlineCompSuggestionType == null)
             {
-                Log("[Suggestions] IntelliCode 型が見つかりません。");
+                LogHelper.DebugLog("[Suggestions] IntelliCode 型が見つかりません。");
                 return;
             }
 
             var inlineInst = FindInlineInstance(view);
             if (inlineInst == null)
             {
-                Log("[Suggestions] InlineCompletionsInstance が取得できません。");
+                LogHelper.DebugLog("[Suggestions] InlineCompletionsInstance が取得できません。");
                 return;
             }
 
@@ -75,7 +71,7 @@ namespace Shine.Suggestion
             var displayText = TrimSuggestion(ghostText, limitToThreeLines: true);
             if (string.IsNullOrEmpty(displayText))
             {
-                Log("[Suggestions] 空行または改行のみのため提案せず。");
+                LogHelper.DebugLog("[Suggestions] 空行または改行のみのため提案せず。");
                 return;
             }
 
@@ -85,7 +81,7 @@ namespace Shine.Suggestion
             var proposals = Proposals.Create(view, displayText, position);
             if (proposals.Proposals.Count == 0)
             {
-                Log("[Suggestions] Proposal を生成できませんでした。");
+                LogHelper.DebugLog("[Suggestions] Proposal を生成できませんでした。");
                 return;
             }
 
@@ -97,7 +93,7 @@ namespace Shine.Suggestion
             }
             catch (Exception ex)
             {
-                Log($"[Suggestions] InlineCompletionSuggestion 生成失敗: {ex.Message}");
+                LogHelper.DebugLog($"[Suggestions] InlineCompletionSuggestion 生成失敗: {ex.Message}");
                 return;
             }
 
@@ -105,7 +101,7 @@ namespace Shine.Suggestion
             var suggMgr = _suggestionMgrField?.GetValue(inlineInst);
             if (suggMgr == null || _tryDisplaySuggestionAsync == null)
             {
-                Log("[Suggestions] SuggestionManager が取得できません。");
+                LogHelper.DebugLog("[Suggestions] SuggestionManager が取得できません。");
                 return;
             }
 
@@ -114,7 +110,7 @@ namespace Shine.Suggestion
 
             if (taskObj is not Task task)
             {
-                Log("[Suggestions] TryDisplaySuggestionAsync が Task を返しませんでした。");
+                LogHelper.DebugLog("[Suggestions] TryDisplaySuggestionAsync が Task を返しませんでした。");
                 return;
             }
 
@@ -124,7 +120,7 @@ namespace Shine.Suggestion
             var session = task.GetType().GetProperty("Result")?.GetValue(task);
             if (session is null)
             {
-                Log("[Suggestions] IntelliCode が提案を表示しませんでした。(改行・重複・機能設定などが原因)");
+                LogHelper.DebugLog("[Suggestions] IntelliCode が提案を表示しませんでした。(改行・重複・機能設定などが原因)");
                 return;
             }
 
@@ -294,19 +290,7 @@ namespace Shine.Suggestion
                 var prop = type.GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 if (prop?.CanWrite == true) { prop.SetValue(target, value); return; }
             }
-            Log($"[Suggestions] Proposals 注入に失敗: {type.Name}");
-        }
-
-        private static void Log(string msg)
-        {
-            ThreadHelper.JoinableTaskFactory.Run(async () =>
-            {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                if (ServiceProvider.GlobalProvider.GetService(typeof(SVsOutputWindow)) is not IVsOutputWindow ow) return;
-                var paneGuid = VSConstants.GUID_OutWindowGeneralPane;
-                ow.GetPane(ref paneGuid, out var pane);
-                pane?.OutputString(msg + Environment.NewLine);
-            });
+            LogHelper.DebugLog($"[Suggestions] Proposals 注入に失敗: {type.Name}");
         }
     }
 }

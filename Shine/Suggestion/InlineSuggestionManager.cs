@@ -1,16 +1,15 @@
-﻿// ファイル名: InlineSuggestionManager.cs
-using System;
+﻿using System;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Shine.Helpers;
 
 namespace Shine.Suggestion
 {
@@ -23,9 +22,7 @@ namespace Shine.Suggestion
         private readonly IWpfTextView _view;
         private readonly IChatClientService _chat;
         private readonly CancellationTokenSource _cts = new();
-
-        private static Guid _paneGuid =
-            new Guid("D2E3747C-1234-ABCD-5678-0123456789AB");
+        private readonly SemaphoreSlim _suggestionLock = new(initialCount: 1, maxCount: 1);
 
         private object? _currentSession;
         private int? _commitOriginPos;          // Tab 押下時の BufferPosition
@@ -33,6 +30,7 @@ namespace Shine.Suggestion
 
         /* ───── プロパティ ───── */
         internal bool HasActiveSession => _currentSession != null;
+        internal bool IsBusy => _suggestionLock.CurrentCount == 0;
         internal string? LastProposalText
             => _view.Properties.TryGetProperty<string>("Shine.LastProposalText", out var t) ? t : null;
 
@@ -58,7 +56,20 @@ namespace Shine.Suggestion
         /* =====================================================================
                                    Enter → AI へ問い合わせ
         =====================================================================*/
-        public async Task OnEnterAsync() => await RequestSuggestionAsync();
+        public async Task OnEnterAsync()
+        {
+            if (!await _suggestionLock.WaitAsync(0, _cts.Token))
+                return;
+
+            try
+            {
+                await RequestSuggestionAsync();
+            }
+            finally
+            {
+                _suggestionLock.Release();
+            }
+        }
 
         private async Task RequestSuggestionAsync()
         {
@@ -92,7 +103,7 @@ $"#Context\n{ctx}");
 
             string suggestion = PostProcess(reply, ctx);
 #if DEBUG
-            await DumpReplyAsync(suggestion);
+            LogHelper.DebugLog(suggestion);
 #endif
             if (string.IsNullOrWhiteSpace(suggestion)) return;
 
@@ -294,17 +305,10 @@ $"#Context\n{ctx}");
             return code;
         }
 
-#if DEBUG
-        private static async Task DumpReplyAsync(string text)
+        public void Dispose()
         {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            if (ServiceProvider.GlobalProvider.GetService(typeof(SVsOutputWindow)) is not IVsOutputWindow ow) return;
-            ow.CreatePane(ref _paneGuid, "Shine Suggestions", 1, 0);
-            ow.GetPane(ref _paneGuid, out var pane);
-            pane?.OutputString($"[Shine @ {DateTime.Now:HH:mm:ss}]\n{text}\n\n");
+            _cts.Cancel();
+            _suggestionLock.Dispose();
         }
-#endif
-
-        public void Dispose() => _cts.Cancel();
     }
 }

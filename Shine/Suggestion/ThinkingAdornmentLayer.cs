@@ -1,5 +1,4 @@
-﻿// ファイル名: ThinkingAdornmentLayer.cs
-using System.ComponentModel.Composition;
+﻿using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
 

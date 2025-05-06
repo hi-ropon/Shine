@@ -1,13 +1,11 @@
-﻿// ファイル名: InlineSuggestionCommandFilter.cs
-using System;
-using System.Runtime.InteropServices;
+﻿using System;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
-using Shine;
+using Shine.Helpers;
 
 namespace Shine.Suggestion
 {
@@ -28,7 +26,7 @@ namespace Shine.Suggestion
 
         public int QueryStatus(ref Guid pguidCmdGroup, uint cCmds, OLECMD[] prgCmds, IntPtr pCmdText)
         {
-            // カスタムコマンド（Alt+K → TriggerSuggestionCommand）をサポート＆有効化
+            // Alt+K（triggerSuggestionCommand）の有効/無効を動的に切替
             if (pguidCmdGroup == GuidList.guidShinePackageCmdSet)
             {
                 for (int i = 0; i < cCmds; i++)
@@ -37,22 +35,28 @@ namespace Shine.Suggestion
                     {
                         prgCmds[i].cmdf = (uint)(
                             OLECMDF.OLECMDF_SUPPORTED |
-                            OLECMDF.OLECMDF_ENABLED
+                            (_manager.IsBusy ? 0 : OLECMDF.OLECMDF_ENABLED)
                         );
                         return VSConstants.S_OK;
                     }
                 }
             }
-            // Tab やその他は既存に委譲
+
+            // Tab などその他は既存に委譲
             return _next!.QueryStatus(ref pguidCmdGroup, cCmds, prgCmds, pCmdText);
         }
 
         public int Exec(ref Guid pguidCmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
         {
-            // ───────── TriggerSuggestionCommand（Alt+@）─────────
+            // ───────── Alt+K ─────────
             if (pguidCmdGroup == GuidList.guidShinePackageCmdSet &&
                 nCmdID == PkgCmdIDList.triggerSuggestionCommand)
             {
+                if (_manager.IsBusy)
+                {
+                    LogHelper.DebugLog("Alt+K ignored – suggestion already running.");
+                    return VSConstants.S_OK;
+                }
                 _ = Task.Run(() => _manager.OnEnterAsync());
             }
 

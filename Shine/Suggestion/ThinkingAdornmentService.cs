@@ -1,6 +1,4 @@
-﻿// ファイル名: ThinkingAdornmentService.cs
-using System;
-using System.Windows.Controls;
+﻿using System.Windows.Controls;
 using System.Windows;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text;
