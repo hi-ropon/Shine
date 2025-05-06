@@ -1,5 +1,4 @@
-﻿// ChatClientServiceFactory.cs
-namespace Shine
+﻿namespace Shine
 {
     public static class ChatClientServiceFactory
     {
@@ -14,8 +13,9 @@ namespace Shine
             {
                 OpenAiProvider.OpenAI => new OpenAiClientService(
                     opts.OpenAIApiKey,
-                    opts.OpenAIModelName,
-                    opts.Temperature),
+                    "o4-mini",
+                    opts.Temperature,
+                    "high"),
 
                 OpenAiProvider.AzureOpenAI => new AzureOpenAiClientService(
                     opts.AzureOpenAIEndpoint,
