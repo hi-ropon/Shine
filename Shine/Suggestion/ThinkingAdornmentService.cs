@@ -79,18 +79,20 @@ namespace Shine.Suggestion
                 var model = (IComponentModel)Package.GetGlobalService(typeof(SComponentModel));
                 model.DefaultCompositionService.SatisfyImportsOnce(this);
 
-                // コメント分類を取得
+                // コメントの色とエディタ既定のフォントサイズを取得
                 var commentType = _typeRegistry.GetClassificationType(PredefinedClassificationTypeNames.Comment);
                 var formatMap = _formatMapService.GetClassificationFormatMap(view);
                 var textProps = formatMap.GetTextProperties(commentType);
-
-                // コメント色と、フォントサイズを取得
                 var commentBrush = textProps.ForegroundBrush;
                 double fontSize = textProps.FontRenderingEmSize;
+
+                // フォントファミリを指定　例: Cascadia Code を使う場合（Fira Code, Consolas）
+                var fontFamily = new FontFamily("ＭＳ ゴシック");
 
                 _marker = new TextBlock
                 {
                     Text = "Thinking…",
+                    FontFamily = fontFamily,
                     FontSize = fontSize,
                     Foreground = commentBrush,
                     Background = null,
@@ -127,7 +129,7 @@ namespace Shine.Suggestion
                 }
 
                 Canvas.SetLeft(_marker, left);
-                Canvas.SetTop(_marker, geom.Bounds.Top - 4);
+                Canvas.SetTop(_marker, geom.Bounds.Top);
 
                 _layer.AddAdornment(
                     AdornmentPositioningBehavior.TextRelative,
