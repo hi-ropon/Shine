@@ -127,7 +127,7 @@ namespace Shine.Suggestion
                 }
 
                 Canvas.SetLeft(_marker, left);
-                Canvas.SetTop(_marker, geom.Bounds.Top);
+                Canvas.SetTop(_marker, geom.Bounds.Top - 4);
 
                 _layer.AddAdornment(
                     AdornmentPositioningBehavior.TextRelative,
@@ -136,6 +136,10 @@ namespace Shine.Suggestion
                 Debug.WriteLine($"Thinking marker added at {left},{geom.Bounds.Top}");
             }
 
+            /// <summary>
+            /// 通常の GetMarkerGeometry が null を返したときに、
+            /// キャレット位置の文字セルを矩形で表して Geometry を返すメソッド
+            /// </summary>
             private Geometry CreateFallbackGeometry(SnapshotPoint caret)
             {
                 var lineView = _view.TextViewLines.GetTextViewLineContainingBufferPosition(caret);
