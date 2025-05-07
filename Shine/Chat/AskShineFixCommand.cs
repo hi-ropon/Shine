@@ -87,13 +87,13 @@ namespace Shine
                 return;
             }
 
-            /* ─── ソース スニペット抽出（±5 行） ─── */
+            /* ─── ソース スニペット抽出（ファイル全体） ─── */
             var lines = File.ReadAllLines(filePath);
-            int start = Math.Max(line - 5, 1);
-            int end = Math.Min(line + 4, lines.Length);
             var snippet = new StringBuilder();
-            for (int i = start; i <= end; i++)
+            for (int i = 1; i <= lines.Length; i++)
+            {
                 snippet.AppendLine($"{i,4}: {lines[i - 1]}");
+            }
 
             /* ─── AI へプロンプト送信 ─── */
             string prompt =
