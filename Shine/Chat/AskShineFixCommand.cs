@@ -118,7 +118,7 @@ namespace Shine
             /* ─── AI へプロンプト送信 ─── */
             string prompt =
 $@"#Role
-You are a brilliant C# engineer. Fix the compilation error.
+You are a brilliant code engineer. Fix the compilation error, and briefly explain what and how you fixed.
 
 #Error
 {message}
@@ -128,15 +128,30 @@ You are a brilliant C# engineer. Fix the compilation error.
 {snippet}
 ```";
 
+            // ツールウィンドウ取得
+            var tw = ShinePackage.Instance.FindToolWindow(typeof(ChatToolWindow), 0, true);
+            var ctrl = tw?.Content as ChatToolWindowControl;
+            var frame = tw?.Frame as IVsWindowFrame;
+
+            // ローディング表示開始
+            if (ctrl != null)
+            {
+                ctrl.Dispatcher.Invoke(() => ctrl.StartLoading());
+                frame?.Show();
+            }
+
+            // AI 呼び出し
             string aiReply;
             try
             {
-                var opt = (AiAssistantOptions)ShinePackage.Instance.GetDialogPage(typeof(AiAssistantOptions));
-                IChatClientService chat =
-                    opt.Provider == OpenAiProvider.OpenAI
+                var opt = (AiAssistantOptions)ShinePackage.Instance
+                              .GetDialogPage(typeof(AiAssistantOptions));
+                IChatClientService chat = opt.Provider == OpenAiProvider.OpenAI
                     ? new OpenAiClientService(opt.OpenAIApiKey, opt.OpenAIModelName, opt.Temperature)
-                    : new AzureOpenAiClientService(opt.AzureOpenAIEndpoint, opt.AzureOpenAIApiKey,
-                                                   opt.AzureDeploymentName, opt.Temperature);
+                    : new AzureOpenAiClientService(opt.AzureOpenAIEndpoint,
+                                                   opt.AzureOpenAIApiKey,
+                                                   opt.AzureDeploymentName,
+                                                   opt.Temperature);
 
                 aiReply = await chat.GetChatResponseAsync(prompt);
             }
@@ -144,16 +159,20 @@ You are a brilliant C# engineer. Fix the compilation error.
             {
                 aiReply = $"AI との通信で例外が発生しました: {ex.Message}";
             }
+            finally
+            {
+                // ローディング解除
+                if (ctrl != null)
+                    ctrl.Dispatcher.Invoke(() => ctrl.StopLoading());
+            }
 
-            /* ─── Chat ウィンドウへ書き込み ─── */
-            var tw = ShinePackage.Instance.FindToolWindow(typeof(ChatToolWindow), 0, true);
-            if (tw?.Content is ChatToolWindowControl ctrl)
+            // Chat ウィンドウに結果表示
+            if (ctrl != null)
             {
 #if DEBUG
                 ctrl.AddChatMessageFromExternal("User", prompt);
 #endif
                 ctrl.AddChatMessageFromExternal("Assistant", aiReply);
-                ((IVsWindowFrame)tw.Frame).Show();
             }
             else
             {

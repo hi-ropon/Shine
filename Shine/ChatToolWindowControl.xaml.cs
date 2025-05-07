@@ -65,6 +65,12 @@ namespace Shine
             _chatHistoryManager?.AddChatMessage(role, message);
         }
 
+        public void StartLoading() =>
+            LoadingProgressBar.Visibility = Visibility.Visible;
+
+        public void StopLoading() =>
+            LoadingProgressBar.Visibility = Visibility.Collapsed;
+
         /// <summary>
         /// RichTextBox にペーストされたデータを処理します
         /// </summary>
