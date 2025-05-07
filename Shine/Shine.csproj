@@ -164,6 +164,10 @@
   <!-- リソース／コンテンツ -->
   <ItemGroup>
     <EmbeddedResource Include="Resources\icon.png" />
+    <Content Include="Resources\IconClear.png" />
+    <Content Include="Resources\IconImageInput.png" />
+    <Content Include="Resources\IconSend.png" />
+    <Content Include="Resources\IconSummary.png" />
     <Content Include="Resources\shine.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
