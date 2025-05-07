@@ -32,7 +32,7 @@
       <Button guid="guidShinePackageCmdSet" id="TriggerSuggestionCommand" priority="0x0101" type="Button">
         <Parent guid="guidShinePackageCmdSet" id="MyMenuGroup"/>
         <Strings>
-          <ButtonText>Trigger Suggestion</ButtonText>
+          <ButtonText>Shine(Code Suggestion)</ButtonText>
         </Strings>
       </Button>
 
