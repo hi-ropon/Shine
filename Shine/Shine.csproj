@@ -55,6 +55,7 @@
     <Compile Include="AiAssistantOptions.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Chat\AskShineFixCommand.cs" />
     <Compile Include="Chat\IWebView2Wrapper.cs" />
     <Compile Include="Chat\WebView2Wrapper.cs" />
     <Compile Include="ClientServices\AzureOpenAI\DefaultAzureChatModelProcessor.cs" />
@@ -163,6 +164,10 @@
   <!-- リソース／コンテンツ -->
   <ItemGroup>
     <EmbeddedResource Include="Resources\icon.png" />
+    <Content Include="Resources\IconClear.png" />
+    <Content Include="Resources\IconImageInput.png" />
+    <Content Include="Resources\IconSend.png" />
+    <Content Include="Resources\IconSummary.png" />
     <Content Include="Resources\shine.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>

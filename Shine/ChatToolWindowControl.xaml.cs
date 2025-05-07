@@ -14,6 +14,7 @@ using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.ML.Tokenizers;
 using System.IO;
 using Microsoft.Web.WebView2.Core;
+using Shine.Helpers;
 
 namespace Shine
 {
@@ -58,6 +59,17 @@ namespace Shine
 
             _tokenizer = TiktokenTokenizer.CreateForModel("gpt-4o");
         }
+
+        public void AddChatMessageFromExternal(string role, string message)
+        {
+            _chatHistoryManager?.AddChatMessage(role, message);
+        }
+
+        public void StartLoading() =>
+            LoadingProgressBar.Visibility = Visibility.Visible;
+
+        public void StopLoading() =>
+            LoadingProgressBar.Visibility = Visibility.Collapsed;
 
         /// <summary>
         /// RichTextBox にペーストされたデータを処理します
@@ -300,6 +312,7 @@ namespace Shine
                 debugInfo.AppendLine("_client: " + _chatClientService.ToString());
             }
             _chatHistoryManager.AddChatMessage("System", debugInfo.ToString());
+            LogHelper.DebugLog(debugInfo.ToString());
 #endif
 
             ThemeColor();
