@@ -87,13 +87,33 @@ namespace Shine
                 return;
             }
 
-            /* ─── ソース スニペット抽出（ファイル全体） ─── */
-            var lines = File.ReadAllLines(filePath);
+            string[] lines;
+
+            /* ─── ソース スニペット抽出（編集中の内容を優先取得） ─── */
+            var vsDoc = dte.Documents
+                           .OfType<Document>()
+                           .FirstOrDefault(d => d.FullName.Equals(filePath, StringComparison.OrdinalIgnoreCase));
+            if (vsDoc != null && vsDoc.Object("TextDocument") is TextDocument textDoc)
+            {
+                // 未保存のバッファも含めて全文を取得
+                var editPoint = textDoc.StartPoint.CreateEditPoint();
+                var fullText = editPoint.GetText(textDoc.EndPoint);
+                lines = fullText.Replace("\r\n", "\n").Split('\n');
+            }
+            else if (File.Exists(filePath))
+            {
+                // フォールバック: ディスク上のファイルを読み込み
+                lines = File.ReadAllLines(filePath);
+            }
+            else
+            {
+                ShowInfo($"ファイルが見つかりません: {filePath}");
+                return;
+            }
+
             var snippet = new StringBuilder();
             for (int i = 1; i <= lines.Length; i++)
-            {
                 snippet.AppendLine($"{i,4}: {lines[i - 1]}");
-            }
 
             /* ─── AI へプロンプト送信 ─── */
             string prompt =
