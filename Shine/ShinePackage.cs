@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Shine.Suggestion;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -32,16 +33,16 @@ namespace Shine
         /// <returns></returns>
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
-            // UIスレッドが必要な初期化は、このメソッドの中で行います
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-
             Instance = this;
 
-            // ツールウィンドウを表示するコマンドを初期化
+            // …コマンドの初期化…
             await ShowAiChatCommand.InitializeAsync(this);
             await AskShineFixCommand.InitializeAsync(this);
 
-            // 必要に応じて各モジュールの初期化を実施
+            // Alt+K(Suggestion)のグローバルコマンド登録
+            await TriggerSuggestionCommand.InitializeAsync(this);
+
             await base.InitializeAsync(cancellationToken, progress);
         }
     }

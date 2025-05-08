@@ -1,5 +1,4 @@
-﻿// ファイル名: ApiKeyEditor.cs
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Drawing.Design;
 using System.Windows.Forms;
@@ -9,13 +8,13 @@ namespace Shine
 {
     /// <summary>
     /// API キーをマスク／アンマスクできるプロパティ エディタ
-    /// ・ドロップダウン開いた直後は「****************」を表示
+    /// ・ドロップダウン開いた直後は「******************」を表示
     /// ・「表示」チェックで本物のキーを表示
     /// </summary>
     public class ApiKeyEditor : UITypeEditor
     {
         // グリッド上でもエディタ内でも使う固定マスク文字列
-        private const string _mask = "****************";
+        private const string _mask = "******************";
 
         public override UITypeEditorEditStyle GetEditStyle(ITypeDescriptorContext context)
             => UITypeEditorEditStyle.DropDown;
