@@ -27,8 +27,9 @@ namespace Shine
                     }
                 }
             }
-            catch
+            catch(Exception ex)
             {
+                ShinePackage.MessageService.ShowError(ex);
                 return null;
             }
         }

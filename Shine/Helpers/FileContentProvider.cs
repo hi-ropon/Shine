@@ -44,23 +44,23 @@ namespace Shine
                 }
                 catch (IOException ioEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"ファイル '{filePath}' の読み込み中にIOエラーが発生しました: {ioEx.Message}");
+                    ShinePackage.MessageService.ShowError(ioEx, $"ファイル '{filePath}' の読み込み中にIOエラーが発生しました");
                     return null;
                 }
                 catch (UnauthorizedAccessException uaEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"ファイル '{filePath}' の読み込み中にアクセスエラーが発生しました: {uaEx.Message}");
+                    ShinePackage.MessageService.ShowError(uaEx, $"ファイル '{filePath}' の読み込み中にアクセスエラーが発生しました");
                     return null;
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"ファイル '{filePath}' の読み込み中に予期しないエラーが発生しました: {ex}");
+                    ShinePackage.MessageService.ShowError(ex, $"ファイル '{filePath}' の読み込み中に予期しないエラーが発生しました");
                     return null;
                 }
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"ファイル '{fileName}' が見つかりません。検索したパス: '{filePath}'");
+                ShinePackage.MessageService.OKOnly($"ファイル '{fileName}' が見つかりません。検索したパス: '{filePath}'");
                 return null;
             }
         }
@@ -90,11 +90,11 @@ namespace Shine
             }
             catch (COMException comEx)
             {
-                System.Diagnostics.Debug.WriteLine($"FindFileInProjectでプロジェクトを反復処理中にCOMエラーが発生しました: {comEx.Message}");
+                ShinePackage.MessageService.ShowError(comEx, $"FindFileInProjectでプロジェクトを反復処理中にCOMエラーが発生しました");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"FindFileInProjectでプロジェクトを反復処理中にエラーが発生しました: {ex.Message}");
+                ShinePackage.MessageService.ShowError(ex, $"FindFileInProjectでプロジェクトを反復処理中にエラーが発生しました");
             }
             return null;
         }
@@ -124,11 +124,11 @@ namespace Shine
             }
             catch (COMException comEx)
             {
-                System.Diagnostics.Debug.WriteLine($"ProjectItemsの反復処理中にCOMエラーが発生しました: {comEx.Message}");
+                ShinePackage.MessageService.ShowError(comEx, $"ProjectItemsの反復処理中にCOMエラーが発生しました");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"ProjectItemsの反復処理中にエラーが発生しました: {ex.Message}");
+                ShinePackage.MessageService.ShowError(ex, $"ProjectItemsの反復処理中にエラーが発生しました");
             }
             return null;
         }
@@ -161,17 +161,17 @@ namespace Shine
                         }
                         else
                         {
-                            System.Diagnostics.Debug.WriteLine($"警告: アイテム '{item.Name}' に相対パス '{filePath}' が見つかりました。");
+                            ShinePackage.MessageService.OKOnly($"警告: アイテム '{item.Name}' に相対パス '{filePath}' が見つかりました。");
                             return filePath;
                         }
                     }
-                    catch (ArgumentOutOfRangeException)
+                    catch (ArgumentOutOfRangeException rangeEx)
                     {
-                        System.Diagnostics.Debug.WriteLine($"アイテム '{item.Name}' のFileNames[1]が利用できません。");
+                        ShinePackage.MessageService.ShowError(rangeEx, $"アイテム '{item.Name}' のFileNames[1]が利用できません。");
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"アイテム '{item.Name}' のFileNames取得中にエラーが発生しました: {ex.Message}");
+                        ShinePackage.MessageService.ShowError(ex, $"アイテム '{item.Name}' のFileNames取得中にエラーが発生しました");
                         return null;
                     }
                 }
@@ -194,11 +194,11 @@ namespace Shine
             }
             catch (COMException comEx)
             {
-                System.Diagnostics.Debug.WriteLine($"ProjectItem '{item?.Name}' の処理中にCOMエラーが発生しました: {comEx.Message}");
+                ShinePackage.MessageService.ShowError(comEx, $"ProjectItem '{item?.Name}' の処理中にCOMエラーが発生しました");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"ProjectItem '{item?.Name}' の処理中にエラーが発生しました: {ex.Message}");
+                ShinePackage.MessageService.ShowError(ex, $"ProjectItem '{item?.Name}' の処理中にエラーが発生しました");
             }
             return null;
         }

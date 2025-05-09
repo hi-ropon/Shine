@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Shine.Helpers;
 using Shine.Suggestion;
 using System;
 using System.Runtime.InteropServices;
@@ -25,6 +26,9 @@ namespace Shine
         /// </summary>
         public static ShinePackage Instance { get; private set; }
 
+        /// <summary>外部からアクセス可能な IMessageService インスタンス</summary>
+        public static IMessageService MessageService { get; private set; }
+
         /// <summary>
         /// このメソッドは、パッケージの初期化を行います
         /// </summary>
@@ -35,6 +39,21 @@ namespace Shine
         {
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             Instance = this;
+
+            // 静的プロパティに MessageService をセット
+            MessageService = new MessageService(this);
+
+            // IServiceContainer にも非同期サービスとして登録
+            AddService(
+                typeof(IMessageService),
+                // AsyncServiceCreatorCallback は Task<object> を返す必要がある
+                async (container, ct, serviceType) =>
+                {
+                    // UI スレッドに切り替えてからインスタンス化
+                    await JoinableTaskFactory.SwitchToMainThreadAsync(ct);
+                    return (object)new MessageService(this);
+                },
+                promote: true);
 
             // …コマンドの初期化…
             await ShowAiChatCommand.InitializeAsync(this);

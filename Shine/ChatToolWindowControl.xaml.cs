@@ -109,16 +109,17 @@ namespace Shine
                     {
                         Directory.CreateDirectory(userDataFolder);
                     }
-                    Debug.WriteLine($"Attempt {attempt}: ユーザーデータフォルダ '{userDataFolder}' を使用してWebView2環境を生成します。");
+                    LogHelper.DebugLog($"Attempt {attempt}: ユーザーデータフォルダ '{userDataFolder}' を使用してWebView2環境を生成します。");
 
                     var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
                     await webView.EnsureCoreWebView2Async(env);
-                    Debug.WriteLine("WebView2の初期化に成功しました。");
+                    ShinePackage.MessageService.OKOnly("WebView2の初期化に成功しました。");
+                    LogHelper.DebugLog
                     return true;
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Attempt {attempt}: WebView2の初期化に失敗しました。エラー内容：{ex.Message}");
+                    ShinePackage.MessageService.ShowError(ex, $"Attempt {attempt}: WebView2の初期化に失敗しました。エラー内容");
                     // エラーがユーザーデータフォルダの不整合やロックが原因と考えられる場合、フォルダの削除を試みる
                     if (attempt < maxRetries)
                     {
@@ -126,13 +127,13 @@ namespace Shine
                         {
                             if (Directory.Exists(userDataFolder))
                             {
-                                Debug.WriteLine("ユーザーデータフォルダの状態をリセットするため、フォルダを削除します。");
+                                LogHelper.DebugLog("ユーザーデータフォルダの状態をリセットするため、フォルダを削除します。");
                                 Directory.Delete(userDataFolder, true);
                             }
                         }
                         catch (Exception dirEx)
                         {
-                            Debug.WriteLine($"Attempt {attempt}: ユーザーデータフォルダの削除に失敗しました。エラー内容：{dirEx.Message}");
+                            ShinePackage.MessageService.ShowError(dirEx, $"Attempt {attempt}: ユーザーデータフォルダの削除に失敗しました");
                         }
                         await Task.Delay(1000);
                     }
@@ -158,7 +159,7 @@ namespace Shine
                 bool initialized = await InitializeWebView2WithRetryAsync(ChatHistoryWebView, userDataFolder, maxRetries: 3);
                 if (!initialized)
                 {
-                    Debug.WriteLine("複数回の初期化試行にも関わらずWebView2の初期化に失敗しました。");
+                    LogHelper.DebugLog("複数回の初期化試行にも関わらずWebView2の初期化に失敗しました。");
                     MessageBox.Show("WebView2 の初期化に失敗しました。Visual Studio を再起動するか、システム環境をご確認ください。",
                                     "初期化エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
@@ -360,7 +361,7 @@ namespace Shine
             {
                 errorOccurred = true;
                 reply = $"エラーが発生しました:\n{ex.Message}";
-                Debug.WriteLine($"AI リクエストまたは処理中にエラーが発生しました: {ex}");
+                ShinePackage.MessageService.ShowError(ex, $"AI リクエストまたは処理中にエラーが発生しました");
             }
             finally
             {
@@ -414,7 +415,7 @@ namespace Shine
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"IncludeOpenFilesCheckBox の状態取得中にエラーが発生しました: {ex}");
+                ShinePackage.MessageService.ShowError(ex, $"IncludeOpenFilesCheckBox の状態取得中にエラーが発生しました");
             }
 
             if (includeOpenFiles)
@@ -430,7 +431,7 @@ namespace Shine
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"オープンドキュメントの内容取得中にエラーが発生しました: {ex}");
+                    ShinePackage.MessageService.ShowError(ex, $"オープンドキュメントの内容取得中にエラーが発生しました");
                 }
 
                 if (!string.IsNullOrEmpty(openFilesContent))
@@ -458,7 +459,7 @@ namespace Shine
             {
                 if (dte?.Documents == null)
                 {
-                    Debug.WriteLine("GetOpenDocumentsContent で DTE または Documents コレクションが null です。");
+                    ShinePackage.MessageService.OKOnly("GetOpenDocumentsContent で DTE または Documents コレクションが null です。");
                     return "";
                 }
 
@@ -478,18 +479,18 @@ namespace Shine
                         catch (Exception ex)
                         {
                             sb.AppendLine($"--- {fileName} (読み込みエラー) ---");
-                            Debug.WriteLine($"オープンドキュメント '{doc.FullName}' の読み込み中にエラーが発生しました: {ex}");
+                            ShinePackage.MessageService.ShowError(ex, $"オープンドキュメント '{doc.FullName}' の読み込み中にエラーが発生しました");
                         }
                     }
                     else
                     {
-                        Debug.WriteLine($"Skipping document '{doc?.Name}' (条件に合致しません)。");
+                        ShinePackage.MessageService.OKOnly($"Skipping document '{doc?.Name}' (条件に合致しません)。");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"GetOpenDocumentsContent 内でエラーが発生しました: {ex}");
+                ShinePackage.MessageService.ShowError(ex, $"GetOpenDocumentsContent 内でエラーが発生しました");
             }
 
             return sb.ToString();
@@ -551,7 +552,7 @@ namespace Shine
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error getting DialogPage in EnableButton: {ex}");
+                ShinePackage.MessageService.ShowError(ex, $"Error getting DialogPage in EnableButton");
                 return;
             }
 

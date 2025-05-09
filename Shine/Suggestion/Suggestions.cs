@@ -74,7 +74,7 @@ namespace Shine.Suggestion
             // IntelliCode がロードできなければ諦める
             if (_inlineCompInstanceType == null || _inlineCompSuggestionType == null)
             {
-                LogHelper.DebugLog("[Suggestions] IntelliCode 型が取得できません。");
+                ShinePackage.MessageService.OKOnly("[Suggestions] IntelliCode 型が取得できません。");
                 return;
             }
 
@@ -84,7 +84,7 @@ namespace Shine.Suggestion
                                                       .Contains("InlineCompletionsInstance") == true).Value;
             if (inlineInst == null)
             {
-                LogHelper.DebugLog("[Suggestions] InlineCompletionsInstance がありません。");
+                ShinePackage.MessageService.OKOnly("[Suggestions] InlineCompletionsInstance がありません。");
                 return;
             }
 
@@ -95,7 +95,7 @@ namespace Shine.Suggestion
             string displayText = TrimSuggestion(ghostText, limitToThreeLines: false);
             if (string.IsNullOrWhiteSpace(displayText))
             {
-                LogHelper.DebugLog("[Suggestions] 空の提案は表示しません。");
+                ShinePackage.MessageService.OKOnly("[Suggestions] 空の提案は表示しません。");
                 return;
             }
             view.Properties["Shine.LastProposalText"] = displayText;
@@ -104,7 +104,7 @@ namespace Shine.Suggestion
             var proposals = Proposals.Create(view, displayText, position);
             if (proposals.Proposals.Count == 0)
             {
-                LogHelper.DebugLog("[Suggestions] Proposal 作成に失敗しました。");
+                ShinePackage.MessageService.OKOnly("[Suggestions] Proposal 作成に失敗しました。");
                 return;
             }
 
@@ -113,10 +113,11 @@ namespace Shine.Suggestion
             try
             {
                 inlineSuggestion = CreateInlineSuggestion(inlineInst, proposals);
+
             }
             catch (Exception ex)
             {
-                LogHelper.DebugLog($"[Suggestions] Suggestion 作成失敗: {ex.Message}");
+                ShinePackage.MessageService.ShowError(ex,$"[Suggestions] Suggestion 作成失敗");
                 return;
             }
 
@@ -124,7 +125,7 @@ namespace Shine.Suggestion
             var suggMgr = _suggestionMgrField?.GetValue(inlineInst);
             if (suggMgr == null || _tryDisplaySuggestionAsync == null)
             {
-                LogHelper.DebugLog("[Suggestions] SuggestionManager 取得失敗。");
+                ShinePackage.MessageService.OKOnly("[Suggestions] SuggestionManager 取得失敗。");
                 return;
             }
 
@@ -133,7 +134,7 @@ namespace Shine.Suggestion
 
             if (taskObj is not Task task)
             {
-                LogHelper.DebugLog("[Suggestions] TryDisplaySuggestionAsync の戻り値が Task ではありません。");
+                ShinePackage.MessageService.OKOnly("[Suggestions] TryDisplaySuggestionAsync の戻り値が Task ではありません。");
                 return;
             }
 
@@ -143,7 +144,7 @@ namespace Shine.Suggestion
             var session = task.GetType().GetProperty("Result")?.GetValue(task);
             if (session == null)
             {
-                LogHelper.DebugLog("[Suggestions] IntelliCode が提案を描画しませんでした。");
+                ShinePackage.MessageService.OKOnly("[Suggestions] IntelliCode が提案を描画しませんでした。");
                 return;
             }
 

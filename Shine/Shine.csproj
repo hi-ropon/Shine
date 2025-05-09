@@ -80,7 +80,9 @@
     <Compile Include="Chat\ChatHistory.cs" />
     <Compile Include="Helpers\CodeFile.cs" />
     <Compile Include="Helpers\FileContentProvider.cs" />
+    <Compile Include="Helpers\IMessageService.cs" />
     <Compile Include="Helpers\LogHelper.cs" />
+    <Compile Include="Helpers\MessageService.cs" />
     <Compile Include="Helpers\Theme\IThemeProvider.cs" />
     <Compile Include="Helpers\Mention.cs" />
     <Compile Include="Helpers\Settings.cs" />

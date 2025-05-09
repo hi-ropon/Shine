@@ -48,7 +48,7 @@ namespace Shine
 
             if (Package.GetGlobalService(typeof(DTE)) is not DTE2 dte)
             {
-                ShowInfo("DTE の取得に失敗しました。");
+                ShinePackage.MessageService.OKOnly("DTE の取得に失敗しました。");
                 return;
             }
 
@@ -56,7 +56,7 @@ namespace Shine
             Window errWin = dte.Windows.Item(EnvDTE80.WindowKinds.vsWindowKindErrorList);
             if (errWin?.Object is not EnvDTE80.ErrorList errorList)
             {
-                ShowInfo("Error List ウィンドウを取得できませんでした。");
+                ShinePackage.MessageService.OKOnly("Error List ウィンドウを取得できませんでした。");
                 return;
             }
 
@@ -73,7 +73,7 @@ namespace Shine
 
             if (target == null)
             {
-                ShowInfo("選択されたエラー項目を取得できませんでした。");
+                ShinePackage.MessageService.OKOnly("選択されたエラー項目を取得できませんでした。");
                 return;
             }
 
@@ -83,7 +83,7 @@ namespace Shine
 
             if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
             {
-                ShowInfo($"ファイルが見つかりません: {filePath}");
+                ShinePackage.MessageService.OKOnly($"ファイルが見つかりません: {filePath}");
                 return;
             }
 
@@ -107,7 +107,7 @@ namespace Shine
             }
             else
             {
-                ShowInfo($"ファイルが見つかりません: {filePath}");
+                ShinePackage.MessageService.OKOnly($"ファイルが見つかりません: {filePath}");
                 return;
             }
 
@@ -176,13 +176,8 @@ You are a brilliant code engineer. Fix the compilation error, and briefly explai
             }
             else
             {
-                ShowInfo("ChatToolWindow が取得できませんでした。");
+                ShinePackage.MessageService.OKOnly("ChatToolWindow が取得できませんでした。");
             }
         }
-
-        private void ShowInfo(string msg) =>
-            VsShellUtilities.ShowMessageBox(_package, msg, "Shine",
-                OLEMSGICON.OLEMSGICON_INFO, OLEMSGBUTTON.OLEMSGBUTTON_OK,
-                OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
     }
 }
