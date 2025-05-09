@@ -10,31 +10,95 @@ using Microsoft.VisualStudio.Shell;
 namespace Shine
 {
     /// <summary>
-    ///  ソリューション内のコードファイルの探索処理（プロジェクト／プロジェクトアイテムの再帰処理や拡張子チェック）を担当
+    /// ソリューション内のコードファイルの探索処理（プロジェクト／プロジェクトアイテムの再帰処理や拡張子チェック）を担当
     /// </summary>
     public static class CodeFile
     {
         /// <summary>
+        /// ソリューション内の全プロジェクト（ソリューションフォルダ内のプロジェクトも含む）を取得する
+        /// </summary>
+        /// <param name="dte">DTE2 インスタンス</param>
+        /// <returns>全プロジェクトの IEnumerable</returns>
+        private static IEnumerable<Project> GetAllProjects(DTE2 dte)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            foreach (Project project in dte.Solution.Projects)
+            {
+                foreach (Project p in GetProjects(project))
+                {
+                    yield return p;
+                }
+            }
+        }
+
+        /// <summary>
+        /// プロジェクトがソリューションフォルダの場合はその中のプロジェクトも再帰的に取得する
+        /// </summary>
+        /// <param name="project">対象のプロジェクト</param>
+        /// <returns>対象プロジェクトおよび入れ子のプロジェクト</returns>
+        private static IEnumerable<Project> GetProjects(Project project)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (project == null)
+            {
+                yield break;
+            }
+            // ソリューションフォルダの場合は、その中に入っている各プロジェクトを取得する
+            if (project.Kind == EnvDTE80.ProjectKinds.vsProjectKindSolutionFolder)
+            {
+                if (project.ProjectItems != null)
+                {
+                    foreach (ProjectItem item in project.ProjectItems)
+                    {
+                        Project subProj = null;
+                        try
+                        {
+                            subProj = item.SubProject;
+                        }
+                        catch (COMException)
+                        {
+                            // 例外が発生した場合は無視して次の項目へ
+                        }
+                        if (subProj != null)
+                        {
+                            foreach (Project p in GetProjects(subProj))
+                            {
+                                yield return p;
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                yield return project;
+            }
+        }
+
+        /// <summary>
         /// ソリューション内のコードファイルを取得する
         /// </summary>
-        /// <returns></returns>
+        /// <returns>コードファイルのパス（またはファイル名）のリスト</returns>
         public static List<string> GetCodeFilesInSolution()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var codeFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             DTE2 dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
 
-            if (dte?.Solution?.Projects == null)
+            if (dte?.Solution == null)
             {
-                System.Diagnostics.Debug.WriteLine("DTE または ソリューションまたはプロジェクトが null です。コードファイルを取得できません。");
+                System.Diagnostics.Debug.WriteLine("DTE または ソリューションが null です。コードファイルを取得できません。");
                 return new List<string>();
             }
 
-            foreach (Project proj in dte.Solution.Projects)
+            // ソリューション内の全プロジェクト（ネストしたプロジェクトも含む）を走査する
+            foreach (var proj in GetAllProjects(dte))
             {
+                System.Diagnostics.Debug.WriteLine($"プロジェクト '{proj?.Name}' の処理中");
                 try
                 {
                     codeFiles.UnionWith(GetCodeFilesFromProject(proj));
+                    System.Diagnostics.Debug.WriteLine($"現在のファイル数： '{codeFiles.Count}'");
                 }
                 catch (COMException comEx)
                 {
@@ -52,14 +116,15 @@ namespace Shine
         /// <summary>
         /// プロジェクト内のコードファイルを取得する
         /// </summary>
-        /// <param name="project"></param>
-        /// <returns></returns>
+        /// <param name="project">対象のプロジェクト</param>
+        /// <returns>コードファイルのパス（またはファイル名）の IEnumerable</returns>
         public static IEnumerable<string> GetCodeFilesFromProject(Project project)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var result = new List<string>();
 
-            if (project == null) return result;
+            if (project == null)
+                return result;
 
             ProjectItems items = null;
 
@@ -78,7 +143,8 @@ namespace Shine
                 return result;
             }
 
-            if (items == null) return result;
+            if (items == null)
+                return result;
 
             foreach (ProjectItem item in items)
             {
@@ -102,14 +168,15 @@ namespace Shine
         /// <summary>
         /// プロジェクトアイテム内のコードファイルを取得する
         /// </summary>
-        /// <param name="item"></param>
-        /// <returns></returns>
+        /// <param name="item">対象の ProjectItem</param>
+        /// <returns>コードファイルのパス（またはファイル名）の IEnumerable</returns>
         public static IEnumerable<string> GetCodeFilesFromProjectItem(ProjectItem item)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             var result = new List<string>();
 
-            if (item == null) return result;
+            if (item == null)
+                return result;
 
             string itemName = null;
             ProjectItems subItems = null;
@@ -117,11 +184,12 @@ namespace Shine
             try
             {
                 itemName = item.Name;
-
+                // プロジェクトアイテム自身がコードファイルであれば追加
                 if (IsCodeFile(itemName))
                 {
                     result.Add(itemName);
                 }
+
                 subItems = item.ProjectItems;
             }
             catch (COMException comEx)
@@ -160,17 +228,18 @@ namespace Shine
         /// <summary>
         /// 指定されたファイル名がコードファイルかどうかを判定する
         /// </summary>
-        /// <param name="fileName"></param>
-        /// <returns></returns>
+        /// <param name="fileName">ファイル名</param>
+        /// <returns>コードファイルであれば true</returns>
         public static bool IsCodeFile(string fileName)
         {
-            if (string.IsNullOrEmpty(fileName)) return false;
+            if (string.IsNullOrEmpty(fileName))
+                return false;
 
             try
             {
                 string extension = Path.GetExtension(fileName)?.ToLowerInvariant();
                 return extension == ".cs" ||
-                       extension == "c" ||
+                       extension == ".c" ||
                        extension == ".vb" ||
                        extension == ".cpp" ||
                        extension == ".h" ||
