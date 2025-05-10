@@ -26,7 +26,8 @@ namespace Shine
         public const uint myMenuGroup = 0x1020;
         // Shine(Code Assistant Tool) メニュー起動コマンド
         public const uint showAiChatCommand = 0x0100;
-        // Alt+@ で補完トリガーするコマンド
+        // Alt+K で補完トリガーするコマンド
         public const uint triggerSuggestionCommand = 0x0101;
+        public const uint inlineChatCommand = 0x0103;   // Alt+I
     }
 }

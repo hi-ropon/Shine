@@ -44,6 +44,15 @@
           <CommandName>AskShineFixCommand</CommandName>
         </Strings>
       </Button>
+
+      <!-- InlineChatCommand ボタン -->
+      <Button guid="guidShinePackageCmdSet" id="InlineChatCommand" priority="0x0103" type="Button">
+        <Parent guid="guidShinePackageCmdSet" id="MyMenuGroup"/>
+        <Strings>
+          <ButtonText>Shine(Inline Chat)</ButtonText>
+        </Strings>
+      </Button>
+      
     </Buttons>
   </Commands>
 
@@ -55,6 +64,13 @@
                 editor="guidVSStd97"
                 key1="K"
                 mod1="ALT" />
+    
+    <!-- Alt + L キーバインド -->
+    <KeyBinding guid="guidShinePackageCmdSet"
+                id="InlineChatCommand"
+                editor="guidVSStd97"
+                key1="L"
+                mod1="ALT"/>
   </KeyBindings>
 
   <!--──────────────────────── GUID / ID ────────────────────────-->
@@ -66,6 +82,7 @@
       <IDSymbol name="ShowAiChatCommand"        value="0x0100" />
       <IDSymbol name="TriggerSuggestionCommand" value="0x0101" />
       <IDSymbol name="AskShineFixCommand"       value="0x0102" />
+      <IDSymbol name="InlineChatCommand"        value="0x0103" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

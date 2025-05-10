@@ -88,6 +88,9 @@
     <Compile Include="Helpers\Settings.cs" />
     <Compile Include="Helpers\Theme\Theme.cs" />
     <Compile Include="ClientServices\IChatModelProcessor.cs" />
+    <Compile Include="InlineChatCommand.cs" />
+    <Compile Include="InlineChatKeyFilter.cs" />
+    <Compile Include="InlineChatSession.cs" />
     <Compile Include="ModelNameEditor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Helpers\ResourceHelper.cs" />
@@ -138,6 +141,9 @@
     <PackageReference Include="Microsoft.VisualStudio.Language" Version="17.13.226" />
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.13.40008" ExcludeAssets="runtime" NoWarn="NU1604">
       <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Text.Logic">
+      <Version>17.13.226</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Text.UI">
       <Version>17.13.226</Version>

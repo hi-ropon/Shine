@@ -58,8 +58,7 @@ namespace Shine
             // …コマンドの初期化…
             await ShowAiChatCommand.InitializeAsync(this);
             await AskShineFixCommand.InitializeAsync(this);
-
-            // Alt+K(Suggestion)のグローバルコマンド登録
+            await InlineChatCommand.InitializeAsync(this);
             await TriggerSuggestionCommand.InitializeAsync(this);
 
             await base.InitializeAsync(cancellationToken, progress);
