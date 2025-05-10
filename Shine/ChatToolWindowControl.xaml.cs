@@ -113,7 +113,6 @@ namespace Shine
 
                     var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
                     await webView.EnsureCoreWebView2Async(env);
-                    ShinePackage.MessageService.OKOnly("WebView2の初期化に成功しました。");
                     LogHelper.DebugLog("WebView2の初期化に成功しました。");
                     return true;
                 }
