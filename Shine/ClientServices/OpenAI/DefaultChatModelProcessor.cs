@@ -39,7 +39,7 @@ namespace Shine
 {{
     ""model"": ""{_model}"",
     ""temperature"": {_temperature},
-    ""max_tokens"": 800,
+    ""max_tokens"": 128000,
     ""messages"": [
         {{
             ""role"": ""system"",
