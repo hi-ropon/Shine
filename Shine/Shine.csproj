@@ -88,9 +88,9 @@
     <Compile Include="Helpers\Settings.cs" />
     <Compile Include="Helpers\Theme\Theme.cs" />
     <Compile Include="ClientServices\IChatModelProcessor.cs" />
-    <Compile Include="InlineChatCommand.cs" />
-    <Compile Include="InlineChatKeyFilter.cs" />
-    <Compile Include="InlineChatSession.cs" />
+    <Compile Include="InlineChat\InlineChatCommand.cs" />
+    <Compile Include="InlineChat\InlineChatKeyFilter.cs" />
+    <Compile Include="InlineChat\InlineChatSession.cs" />
     <Compile Include="ModelNameEditor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Helpers\ResourceHelper.cs" />
@@ -100,7 +100,7 @@
     <Compile Include="ShinePackage.cs" />
     <Compile Include="ShowAiChatCommand.cs" />
     <Compile Include="Suggestion\CodeSuggestionListener.cs" />
-    <Compile Include="Suggestion\GuidListAndCmdIDList.cs" />
+    <Compile Include="GuidListAndCmdIDList.cs" />
     <Compile Include="Suggestion\InlineSuggestionCommandFilter.cs" />
     <Compile Include="Suggestion\InlineSuggestionManager.cs" />
     <Compile Include="Suggestion\Proposals.cs" />
