@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Text.RegularExpressions;
 using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
@@ -78,7 +79,6 @@ namespace Shine
                 Padding = new Thickness(4)
             };
 
-            // カーソル位置から Geometry を取得。差分ビュー位置のフォールバック処理で TextBounds を Rect に変換
             var caretPos = _view.Caret.Position.BufferPosition;
             var markerGeom = _view.TextViewLines.GetMarkerGeometry(new SnapshotSpan(caretPos, 0));
             if (markerGeom != null)
@@ -150,14 +150,29 @@ namespace Shine
 
         private async Task SendAsync(TextBox input, Button sendBtn, Button cancelBtn)
         {
-            if (string.IsNullOrWhiteSpace(input.Text)) return;
+            if (string.IsNullOrWhiteSpace(input.Text))
+                return;
 
             sendBtn.IsEnabled = cancelBtn.IsEnabled = input.IsEnabled = false;
+
+            string userQuestion = input.Text.Trim();
+            string currentSource = _view.TextSnapshot.GetText();
+            string prompt =
+$"#Role\n" +
+"You are an expert C# engineer.\n" +
+"#Policy\n" +
+"- Preserve existing code; make changes only to address the user's query.\n" +
+"- Only modify existing code when necessary.\n" +
+"Respond with code only, no comments or explanations.\n" +
+"#UserQuestion\n" +
+userQuestion +
+"\n#CurrentSource\n" +
+currentSource;
 
             string reply;
             try
             {
-                reply = await _chat.GetChatResponseAsync(input.Text);
+                reply = await _chat.GetChatResponseAsync(prompt);
             }
             catch (Exception ex)
             {
@@ -166,8 +181,12 @@ namespace Shine
                 return;
             }
 
+            // コードフェンスを除去
+            var cleaned = Regex.Replace(reply.Trim(), @"^```[^
+]*\n|```$", "", RegexOptions.Multiline);
+
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            ShowDiff(reply);
+            ShowDiff(cleaned);
         }
 
         private void ShowDiff(string newCode)
