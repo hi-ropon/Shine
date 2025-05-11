@@ -55,7 +55,28 @@ namespace Shine
         private void ShowInput()
         {
             Clear();
+
             var input = CreateTextBox();
+
+            // マウスクリックで確実にフォーカス
+            input.PreviewMouseLeftButtonDown += (s, e) =>
+            {
+                e.Handled = true;
+                input.Focus();
+                input.CaretIndex = input.Text.Length;
+                Keyboard.Focus(input);
+            };
+
+            // フォーカス取得時に常にコマンドフィルターを再登録
+            input.GotKeyboardFocus += (s, e) =>
+            {
+                if (_keyFilter != null)
+                {
+                    _viewAdapter.RemoveCommandFilter(_keyFilter);
+                }
+                _keyFilter = new InlineChatKeyFilter(input, _viewAdapter);
+            };
+
             var sendButton = CreateButton("▶ 送信");
             var cancelButton = CreateButton("✖ キャンセル");
 
@@ -98,6 +119,12 @@ namespace Shine
                 AdornmentPositioningBehavior.OwnerControlled,
                 new SnapshotSpan(caretPos, 0),
                 null, panel, null);
+
+            // 最初のフィルター登録とフォーカス
+            if (_keyFilter != null)
+            {
+                _viewAdapter.RemoveCommandFilter(_keyFilter);
+            }
 
             _keyFilter = new InlineChatKeyFilter(input, _viewAdapter);
             input.Dispatcher.BeginInvoke(
