@@ -77,6 +77,16 @@ namespace Shine
                 _keyFilter = new InlineChatKeyFilter(input, _viewAdapter);
             };
 
+            // フォーカスを失ったとき（エディタに戻ったとき）にキャンセル
+            input.LostKeyboardFocus += (s, e) =>
+            {
+                // フォーカス移動先がパネル内の他要素（送信・キャンセルボタン）でない場合のみクリア
+                if (!(e.NewFocus is Button))
+                {
+                    Clear();
+                }
+            };
+
             var sendButton = CreateButton("▶ 送信");
             var cancelButton = CreateButton("✖ キャンセル");
 
@@ -255,8 +265,8 @@ currentSource;
             btnBar.Children.Add(CreateAcceptButton(newCode));
             btnBar.Children.Add(CreateButton("✖ Cancel"));
             ((Button)btnBar.Children[1]).Click += (_, __) => Clear();
-            btnBar.Children.Add(CreateZoomButton("-", () => { _diffZoomLevel = Math.Max(0.1, _diffZoomLevel - 0.1); ApplyDiffZoom(); }));
-            btnBar.Children.Add(CreateZoomButton("+", () => { _diffZoomLevel += 0.1; ApplyDiffZoom(); }));
+            btnBar.Children.Add(CreateZoomButton("－", () => { _diffZoomLevel = Math.Max(0.1, _diffZoomLevel - 0.1); ApplyDiffZoom(); }));
+            btnBar.Children.Add(CreateZoomButton("＋", () => { _diffZoomLevel += 0.1; ApplyDiffZoom(); }));
 
             var stack = new StackPanel();
             stack.Children.Add(diffCtrl);
