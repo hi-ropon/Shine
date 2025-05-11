@@ -55,7 +55,6 @@ namespace Shine
         private void ShowInput()
         {
             Clear();
-
             var input = CreateTextBox();
             var sendButton = CreateButton("▶ 送信");
             var cancelButton = CreateButton("✖ キャンセル");
@@ -101,7 +100,6 @@ namespace Shine
                 null, panel, null);
 
             _keyFilter = new InlineChatKeyFilter(input, _viewAdapter);
-
             input.Dispatcher.BeginInvoke(
                 System.Windows.Threading.DispatcherPriority.Input,
                 new Action(() =>
@@ -157,13 +155,21 @@ namespace Shine
 
             string userQuestion = input.Text.Trim();
             string currentSource = _view.TextSnapshot.GetText();
+            
+            var caretPos = _view.Caret.Position.BufferPosition;
+            int lineNumber = _view.TextSnapshot.GetLineFromPosition(caretPos).LineNumber;
+
+            // プロンプトにポリシーと行番号を追加
             string prompt =
 $"#Role\n" +
-"You are an expert C# engineer.\n" +
+"You are an expert engineer.\n" +
 "#Policy\n" +
 "- Preserve existing code; make changes only to address the user's query.\n" +
 "- Only modify existing code when necessary.\n" +
-"Respond with code only, no comments or explanations.\n" +
+"#Instructions\n" +
+"Provide only code; comments as appropriate. Explanations are not needed.\n" +
+"#CursorLine\n" +
+$"{lineNumber}\n" +
 "#UserQuestion\n" +
 userQuestion +
 "\n#CurrentSource\n" +
@@ -182,8 +188,7 @@ currentSource;
             }
 
             // コードフェンスを除去
-            var cleaned = Regex.Replace(reply.Trim(), @"^```[^
-]*\n|```$", "", RegexOptions.Multiline);
+            var cleaned = Regex.Replace(reply.Trim(), @"^```[^\n]*\n|```$", "", RegexOptions.Multiline);
 
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             ShowDiff(cleaned);
