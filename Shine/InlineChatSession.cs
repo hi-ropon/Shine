@@ -1,13 +1,4 @@
-﻿// ────────────────────────────────────────────────────────
-//  ファイル名: InlineChatSession.cs
-//  説明    : 1 TextView につき 1 インスタンスのインラインチャット＆差分プレビュー
-//             ・差分ビューの FontSize / FontFamily / ZoomLevel をエディタに合わせる
-//             ・差分パネル幅 = Viewport 幅の 90%、高さ = 40%（最小 100px）
-//             ・ShineFeatureGate で Suggestion と排他制御
-//             ・Backspace / Delete / 方向キー対応 (InlineChatKeyFilter)
-//  対応 VS : 2022 以降
-// ────────────────────────────────────────────────────────
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -122,9 +113,23 @@ namespace Shine
         #region UI 表示 / 破棄
         private void ShowInput()
         {
-            if (!ShineFeatureGate.TryBeginInlineChat()) { System.Media.SystemSounds.Beep.Play(); return; }
+            // １）既存のアドーンメント／差分／フィルターをクリア
+            Clear();
 
-            _layer.RemoveAllAdornments();
+            // ２）排他の開始を試みる
+            if (!ShineFeatureGate.TryBeginInlineChat())
+            {
+                System.Media.SystemSounds.Beep.Play();
+                return;
+            }
+
+            // ３）テキストボックスの状態をリセット
+            _input.Text = string.Empty;
+            _input.IsEnabled = true;
+            _sendButton.IsEnabled = true;
+            _cancelButton.IsEnabled = true;
+
+            // ４）カーソル位置を取得してアドーンメントを追加
             var caret = _view.Caret.Position.BufferPosition;
             var span = new SnapshotSpan(caret, 0);
             var geom = _view.TextViewLines.GetMarkerGeometry(span) ?? CreateFallbackGeometry(caret);
@@ -132,12 +137,22 @@ namespace Shine
 
             Canvas.SetLeft(_panel, geom.Bounds.Left);
             Canvas.SetTop(_panel, geom.Bounds.Bottom + 4);
-            _layer.AddAdornment(AdornmentPositioningBehavior.OwnerControlled, span, null, _panel, null);
+            _layer.AddAdornment(
+                AdornmentPositioningBehavior.OwnerControlled,
+                span, null, _panel, null);
 
-            _input.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background,
-                new Action(() => { _input.Focus(); Keyboard.Focus(_input); }));
+            // ５）TextBox にフォーカスを強制し、キャレットを末尾へ
+            _input.Dispatcher.BeginInvoke(
+              System.Windows.Threading.DispatcherPriority.Input,
+              new Action(() =>
+              {
+                  _input.Focus();
+                  _input.CaretIndex = _input.Text.Length;
+                  Keyboard.Focus(_input);
+              }));
 
-            _keyFilter ??= new InlineChatKeyFilter(_input, _viewAdapter);
+            // ６）KeyFilter を再度挿入
+            _keyFilter = new InlineChatKeyFilter(_input, _viewAdapter);
         }
 
         private Geometry? CreateFallbackGeometry(SnapshotPoint caret)
@@ -153,14 +168,24 @@ namespace Shine
 
         private void Clear()
         {
+            // １）ビジュアルを消す
             _layer.RemoveAllAdornments();
-            _diffViewer?.Close(); _diffViewer = null;
 
+            // ２）差分ビューがあれば閉じる
+            if (_diffViewer != null)
+            {
+                _diffViewer.Close();
+                _diffViewer = null;
+            }
+
+            // ３）キー フィルター解除
             if (_keyFilter != null)
             {
                 _viewAdapter.RemoveCommandFilter(_keyFilter);
                 _keyFilter = null;
             }
+
+            // ４）機能ゲート解除
             ShineFeatureGate.EndInlineChat();
         }
         #endregion
