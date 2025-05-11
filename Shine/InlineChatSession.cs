@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.VisualStudio.ComponentModelHost;
@@ -15,197 +14,162 @@ using Microsoft.VisualStudio.Utilities;
 
 namespace Shine
 {
-    /// <summary>インラインチャットと差分プレビューを管理するクラス（1 TextView = 1 インスタンス）</summary>
+    /// <summary>
+    /// インラインチャット＋差分プレビュー (1 TextView = 1 インスタンス)
+    /// </summary>
     internal sealed class InlineChatSession
     {
         private readonly IWpfTextView _view;
+        private readonly IVsTextView _viewAdapter;
         private readonly IChatClientService _chat;
         private readonly AsyncPackage _pkg;
         private readonly IAdornmentLayer _layer;
-        private readonly TextBox _input;
-        private readonly Border _panel;
-        private readonly Button _sendButton;
-        private readonly Button _cancelButton;
-        private InlineChatKeyFilter? _keyFilter;
-        private readonly IVsTextView _viewAdapter;
 
-        // 差分ビュー関連
+        private InlineChatKeyFilter? _keyFilter;
         private IWpfDifferenceViewer? _diffViewer;
         private double _diffZoomLevel = 0.5;
+        private double _baseViewZoom = 1.0;
 
-        #region ctor
-        internal InlineChatSession(IWpfTextView view, IVsTextView viewAdapter,
-                                   IChatClientService chat, AsyncPackage pkg)
+        internal InlineChatSession(
+            IWpfTextView view,
+            IVsTextView viewAdapter,
+            IChatClientService chat,
+            AsyncPackage pkg)
         {
             _view = view;
             _viewAdapter = viewAdapter;
             _chat = chat;
             _pkg = pkg;
             _layer = _view.GetAdornmentLayer("ShineInlineChat");
-
-            // ───── TextBox ─────
-            _input = new TextBox
-            {
-                Width = 350,
-                Height = 24,
-                FontFamily = new FontFamily("Cascadia Code"),
-                Background = new SolidColorBrush(Color.FromArgb(0xEE, 0x22, 0x22, 0x22)),
-                Foreground = Brushes.White,
-                BorderThickness = new Thickness(1),
-                BorderBrush = Brushes.SteelBlue,
-                AcceptsReturn = true,
-                AcceptsTab = false,
-                Focusable = true,
-            };
-
-            _input.PreviewKeyDown += (s, e) =>
-            {
-                if (e.Key == Key.Escape) { e.Handled = true; Clear(); }
-            };
-            _input.KeyDown += OnKeyDown;
-
-
-            // ───── 送信 / キャンセル ─────
-            _sendButton = new Button
-            {
-                Content = "▶ 送信",
-                Margin = new Thickness(4, 0, 0, 0),
-                Padding = new Thickness(8, 2, 8, 2),
-                MinWidth = 60,
-            };
-            _sendButton.Click += async (s, e) => await SendAsync();
-
-            _cancelButton = new Button
-            {
-                Content = "✖ キャンセル",
-                Margin = new Thickness(4, 0, 0, 0),
-                Padding = new Thickness(8, 2, 8, 2),
-                MinWidth = 60,
-            };
-            _cancelButton.Click += (s, e) => Clear();
-
-            // ───── レイアウトパネル ─────
-            var panelGrid = new Grid { Background = Brushes.Transparent };
-            panelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            panelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            panelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            panelGrid.Children.Add(_input); Grid.SetColumn(_input, 0);
-            panelGrid.Children.Add(_sendButton); Grid.SetColumn(_sendButton, 1);
-            panelGrid.Children.Add(_cancelButton); Grid.SetColumn(_cancelButton, 2);
-
-            _panel = new Border
-            {
-                Child = panelGrid,
-                Background = Brushes.Transparent,
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(4),
-            };
         }
-        #endregion
 
-        #region Public API
         internal void Toggle()
         {
-            if (_layer.Elements.Count > 0) Clear(); else ShowInput();
+            if (_layer.Elements.Count > 0)
+                Clear();
+            else
+                ShowInput();
         }
-        #endregion
 
-        #region UI 表示 / 破棄
         private void ShowInput()
         {
-            // １）既存のアドーンメント／差分／フィルターをクリア
             Clear();
-
-            // ２）排他の開始を試みる
             if (!ShineFeatureGate.TryBeginInlineChat())
             {
                 System.Media.SystemSounds.Beep.Play();
                 return;
             }
 
-            // ３）テキストボックスの状態をリセット
-            _input.Text = string.Empty;
-            _input.IsEnabled = true;
-            _sendButton.IsEnabled = true;
-            _cancelButton.IsEnabled = true;
+            var input = CreateTextBox();
+            var sendButton = CreateButton("▶ 送信");
+            var cancelButton = CreateButton("✖ キャンセル");
 
-            // ４）カーソル位置を取得してアドーンメントを追加
-            var caret = _view.Caret.Position.BufferPosition;
-            var span = new SnapshotSpan(caret, 0);
-            var geom = _view.TextViewLines.GetMarkerGeometry(span) ?? CreateFallbackGeometry(caret);
-            if (geom == null) return;
+            sendButton.Click += async (_, __) => await SendAsync(input, sendButton, cancelButton);
+            cancelButton.Click += (_, __) => Clear();
 
-            Canvas.SetLeft(_panel, geom.Bounds.Left);
-            Canvas.SetTop(_panel, geom.Bounds.Bottom + 4);
+            var panelGrid = new Grid { Background = Brushes.Transparent };
+            panelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            panelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            panelGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            panelGrid.Children.Add(input); Grid.SetColumn(input, 0);
+            panelGrid.Children.Add(sendButton); Grid.SetColumn(sendButton, 1);
+            panelGrid.Children.Add(cancelButton); Grid.SetColumn(cancelButton, 2);
+
+            var panel = new Border
+            {
+                Child = panelGrid,
+                Background = Brushes.Transparent,
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(4)
+            };
+
+            // カーソル位置から Geometry を取得。差分ビュー位置のフォールバック処理で TextBounds を Rect に変換
+            var caretPos = _view.Caret.Position.BufferPosition;
+            var markerGeom = _view.TextViewLines.GetMarkerGeometry(new SnapshotSpan(caretPos, 0));
+            if (markerGeom != null)
+            {
+                panel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                Canvas.SetLeft(panel, markerGeom.Bounds.Left);
+                Canvas.SetTop(panel, markerGeom.Bounds.Bottom + 4);
+            }
+            else
+            {
+                var tb = _view.TextViewLines.GetCharacterBounds(caretPos);
+                var fallbackRect = new Rect(tb.Left, tb.Top, tb.Width, tb.Height);
+                Canvas.SetLeft(panel, fallbackRect.Left);
+                Canvas.SetTop(panel, fallbackRect.Bottom + 4);
+            }
+
             _layer.AddAdornment(
                 AdornmentPositioningBehavior.OwnerControlled,
-                span, null, _panel, null);
+                new SnapshotSpan(caretPos, 0),
+                null, panel, null);
 
-            // ５）TextBox にフォーカスを強制し、キャレットを末尾へ
-            _input.Dispatcher.BeginInvoke(
-              System.Windows.Threading.DispatcherPriority.Input,
-              new Action(() =>
-              {
-                  _input.Focus();
-                  _input.CaretIndex = _input.Text.Length;
-                  Keyboard.Focus(_input);
-              }));
+            _keyFilter = new InlineChatKeyFilter(input, _viewAdapter);
 
-            // ６）KeyFilter を再度挿入
-            _keyFilter = new InlineChatKeyFilter(_input, _viewAdapter);
+            input.Dispatcher.BeginInvoke(
+                System.Windows.Threading.DispatcherPriority.Input,
+                new Action(() =>
+                {
+                    input.Focus();
+                    input.CaretIndex = input.Text.Length;
+                    Keyboard.Focus(input);
+                }));
         }
 
-        private Geometry? CreateFallbackGeometry(SnapshotPoint caret)
+        private static TextBox CreateTextBox() => new()
         {
-            var lineView = _view.TextViewLines.GetTextViewLineContainingBufferPosition(caret);
-            if (lineView != null)
-            {
-                var ch = lineView.GetCharacterBounds(caret);
-                return new RectangleGeometry(new Rect(ch.Left, ch.Top, ch.Width, ch.Height));
-            }
-            return null;
-        }
+            Width = 350,
+            Height = 24,
+            FontFamily = new FontFamily("Cascadia Code"),
+            Background = new SolidColorBrush(Color.FromArgb(0xEE, 0x22, 0x22, 0x22)),
+            Foreground = Brushes.White,
+            BorderThickness = new Thickness(1),
+            BorderBrush = Brushes.SteelBlue,
+            AcceptsReturn = true,
+            AcceptsTab = false
+        };
+
+        private static Button CreateButton(string caption) => new()
+        {
+            Content = caption,
+            Margin = new Thickness(4, 0, 0, 0),
+            Padding = new Thickness(8, 2, 8, 2),
+            MinWidth = 60
+        };
 
         private void Clear()
         {
-            // １）ビジュアルを消す
             _layer.RemoveAllAdornments();
-
-            // ２）差分ビューがあれば閉じる
             if (_diffViewer != null)
             {
                 _diffViewer.Close();
                 _diffViewer = null;
             }
-
-            // ３）キー フィルター解除
             if (_keyFilter != null)
             {
                 _viewAdapter.RemoveCommandFilter(_keyFilter);
                 _keyFilter = null;
             }
-
-            // ４）機能ゲート解除
+            _view.ZoomLevelChanged -= OnViewZoomLevelChanged;
             ShineFeatureGate.EndInlineChat();
         }
-        #endregion
 
-        #region 送信ロジック
-        private async Task SendAsync()
+        private async Task SendAsync(TextBox input, Button sendBtn, Button cancelBtn)
         {
-            var prompt = _input.Text;
-            if (string.IsNullOrWhiteSpace(prompt)) return;
+            if (string.IsNullOrWhiteSpace(input.Text)) return;
 
-            _sendButton.IsEnabled = _cancelButton.IsEnabled = _input.IsEnabled = false;
+            sendBtn.IsEnabled = cancelBtn.IsEnabled = input.IsEnabled = false;
 
             string reply;
             try
-            { 
-                reply = await _chat.GetChatResponseAsync(prompt);
+            {
+                reply = await _chat.GetChatResponseAsync(input.Text);
             }
             catch (Exception ex)
             {
-                ShinePackage.MessageService.ShowError(ex, "AI 応答でエラー"); Clear();
+                ShinePackage.MessageService.ShowError(ex, "AI 応答でエラー");
+                Clear();
                 return;
             }
 
@@ -213,21 +177,8 @@ namespace Shine
             ShowDiff(reply);
         }
 
-        private async void OnKeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Escape)
-            {
-                e.Handled = true; Clear();
-            }
-        }
-        #endregion
-
-        #region 差分ビュー
         private void ShowDiff(string newCode)
         {
-            // ─── 差分バッファ作成 ───
-            var oldSnap = _view.TextSnapshot;
-            var oldCode = oldSnap.GetText();
             var compModel = (IComponentModel)Package.GetGlobalService(typeof(SComponentModel));
             var bufFactory = compModel.GetService<ITextBufferFactoryService>();
             var ctRegistry = compModel.GetService<IContentTypeRegistryService>();
@@ -235,97 +186,80 @@ namespace Shine
             var diffViewFac = compModel.GetService<IWpfDifferenceViewerFactoryService>();
 
             var contentType = ctRegistry.GetContentType("text");
-            var leftBuffer = bufFactory.CreateTextBuffer(oldCode, contentType);
-            var rightBuffer = bufFactory.CreateTextBuffer(newCode, contentType);
-            var diffBuf = diffBufSvc.CreateDifferenceBuffer(leftBuffer, rightBuffer);
+            var left = bufFactory.CreateTextBuffer(_view.TextSnapshot.GetText(), contentType);
+            var right = bufFactory.CreateTextBuffer(newCode, contentType);
 
-            _diffViewer = diffViewFac.CreateDifferenceView(diffBuf);
+            _diffViewer = diffViewFac.CreateDifferenceView(
+                diffBufSvc.CreateDifferenceBuffer(left, right));
 
-            // ─── フォント/ズーム調整 ───
-            var defaultProps = _view.FormattedLineSource.DefaultTextProperties;
-            double fontSize = defaultProps.FontRenderingEmSize;
-            var family = defaultProps.Typeface.FontFamily;
-
-            // ZoomLevel はそのまま合わせる
+            var props = _view.FormattedLineSource.DefaultTextProperties;
             foreach (var v in new[] { _diffViewer.LeftView, _diffViewer.RightView, _diffViewer.InlineView })
             {
-                if (v == null) continue;
-
-                if (v.VisualElement is FrameworkElement fe)
+                if (v?.VisualElement is FrameworkElement fe)
                 {
-                    fe.SetValue(Control.FontSizeProperty, fontSize);
-                    fe.SetValue(Control.FontFamilyProperty, family);
+                    fe.SetValue(Control.FontSizeProperty, props.FontRenderingEmSize);
+                    fe.SetValue(Control.FontFamilyProperty, props.Typeface.FontFamily);
                 }
             }
 
-            // ─── ビジュアル要素取得 & サイズ制限 ───
             var diffCtrl = _diffViewer.VisualElement;
-            diffCtrl.MaxWidth = Math.Max(100, _view.ViewportWidth * 1.00);
-            diffCtrl.MaxHeight = Math.Max(100, _view.ViewportHeight * 0.40);
-            diffCtrl.MinWidth = 100;
-            diffCtrl.MinHeight = 100;
-
-            // ─── ボタンバー ───
-            var accept = new Button { Content = "✔ Accept", Margin = new Thickness(4) };
-            var cancel = new Button { Content = "✖ Cancel", Margin = new Thickness(4) };
-            accept.Click += (s, e) => ApplyChanges(newCode);
-            cancel.Click += (s, e) => Clear();
-
-            // ─── ズーム操作 ───
-            var zoomIn = new Button { Content = "+", Margin = new Thickness(4), MinWidth = 24 };
-            var zoomOut = new Button { Content = "-", Margin = new Thickness(4), MinWidth = 24 };
-            zoomIn.Click += (_, __) => { _diffZoomLevel += 0.1; ApplyDiffZoom(); };
-            zoomOut.Click += (_, __) => { _diffZoomLevel = Math.Max(0.1, _diffZoomLevel - 0.1); ApplyDiffZoom(); };
+            diffCtrl.MaxWidth = Math.Max(100, _view.ViewportWidth * 1.0);
+            diffCtrl.MaxHeight = Math.Max(100, _view.ViewportHeight * 0.4);
+            diffCtrl.MinWidth = diffCtrl.MinHeight = 100;
 
             var btnBar = new StackPanel { Orientation = Orientation.Horizontal };
-            btnBar.Children.Add(accept);
-            btnBar.Children.Add(cancel);
-            btnBar.Children.Add(zoomOut);
-            btnBar.Children.Add(zoomIn);
+            btnBar.Children.Add(CreateAcceptButton(newCode));
+            btnBar.Children.Add(CreateButton("✖ Cancel"));
+            ((Button)btnBar.Children[1]).Click += (_, __) => Clear();
+            btnBar.Children.Add(CreateZoomButton("-", () => { _diffZoomLevel = Math.Max(0.1, _diffZoomLevel - 0.1); ApplyDiffZoom(); }));
+            btnBar.Children.Add(CreateZoomButton("+", () => { _diffZoomLevel += 0.1; ApplyDiffZoom(); }));
 
-            // ─── 全体スタックに差分とボタンバーを追加 ───
             var stack = new StackPanel();
-            stack.Children.Add(_diffViewer.VisualElement);
+            stack.Children.Add(diffCtrl);
             stack.Children.Add(btnBar);
 
             _layer.RemoveAllAdornments();
             _layer.AddAdornment(
-              AdornmentPositioningBehavior.OwnerControlled,
-              new SnapshotSpan(_view.Caret.Position.BufferPosition, 0),
-              null,
-              stack,
-              null);
+                AdornmentPositioningBehavior.OwnerControlled,
+                new SnapshotSpan(_view.Caret.Position.BufferPosition, 0),
+                null, stack, null);
 
+            _baseViewZoom = _view.ZoomLevel;
+            _view.ZoomLevelChanged += OnViewZoomLevelChanged;
             ApplyDiffZoom();
         }
 
-        /// <summary>
-        /// _diffViewer が非 null のとき、各ビューに _diffZoomLevel を適用
-        /// </summary>
+        private Button CreateAcceptButton(string newCode)
+        {
+            var accept = CreateButton("✔ Accept");
+            accept.Click += (_, __) =>
+            {
+                using var edit = _view.TextBuffer.CreateEdit();
+                edit.Replace(0, _view.TextSnapshot.Length, newCode);
+                edit.Apply();
+                Clear();
+            };
+            return accept;
+        }
+
+        private static Button CreateZoomButton(string caption, Action onClick)
+        {
+            var btn = new Button { Content = caption, Margin = new Thickness(4), MinWidth = 24 };
+            btn.Click += (_, __) => onClick();
+            return btn;
+        }
+
+        private void OnViewZoomLevelChanged(object? sender, ZoomLevelChangedEventArgs e)
+            => ApplyDiffZoom();
+
         private void ApplyDiffZoom()
         {
             if (_diffViewer == null) return;
-
-            // 左右／インラインすべてに適用
-            foreach (var view in new[] { _diffViewer.LeftView, _diffViewer.RightView, _diffViewer.InlineView })
+            double fixedZoom = _diffZoomLevel * _baseViewZoom;
+            foreach (var v in new[] { _diffViewer.LeftView, _diffViewer.RightView, _diffViewer.InlineView })
             {
-                if (view != null)
-                {
-                    view.ZoomLevel = _diffZoomLevel * _view.ZoomLevel;
-                }
+                if (v != null) v.ZoomLevel = fixedZoom;
             }
         }
-
-
-        private void ApplyChanges(string newCode)
-        {
-            using (var edit = _view.TextBuffer.CreateEdit())
-            {
-                edit.Replace(0, _view.TextSnapshot.Length, newCode);
-                edit.Apply();
-            }
-            Clear();
-        }
-        #endregion
     }
 }
