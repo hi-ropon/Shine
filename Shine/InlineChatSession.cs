@@ -35,13 +35,12 @@ namespace Shine
         private readonly Border _panel;
         private readonly Button _sendButton;
         private readonly Button _cancelButton;
-        private bool _isImeComposing;
         private InlineChatKeyFilter? _keyFilter;
         private readonly IVsTextView _viewAdapter;
 
         // 差分ビュー関連
         private IWpfDifferenceViewer? _diffViewer;
-        private double _diffZoomLevel = 1.0;
+        private double _diffZoomLevel = 0.5;
 
         #region ctor
         internal InlineChatSession(IWpfTextView view, IVsTextView viewAdapter,
@@ -74,11 +73,6 @@ namespace Shine
             };
             _input.KeyDown += OnKeyDown;
 
-            // IME 状態把握
-            _input.AddHandler(TextCompositionManager.PreviewTextInputStartEvent,
-                new TextCompositionEventHandler((s, e) => _isImeComposing = true));
-            _input.AddHandler(TextCompositionManager.TextInputEvent,
-                new TextCompositionEventHandler((s, e) => _isImeComposing = false));
 
             // ───── 送信 / キャンセル ─────
             _sendButton = new Button
@@ -178,7 +172,6 @@ namespace Shine
             if (string.IsNullOrWhiteSpace(prompt)) return;
 
             _sendButton.IsEnabled = _cancelButton.IsEnabled = _input.IsEnabled = false;
-            //_input.Text = "Thinking…";
 
             string reply;
             try
@@ -232,7 +225,6 @@ namespace Shine
             foreach (var v in new[] { _diffViewer.LeftView, _diffViewer.RightView, _diffViewer.InlineView })
             {
                 if (v == null) continue;
-                v.ZoomLevel = _view.ZoomLevel;
 
                 if (v.VisualElement is FrameworkElement fe)
                 {
@@ -278,6 +270,8 @@ namespace Shine
               null,
               stack,
               null);
+
+            ApplyDiffZoom();
         }
 
         /// <summary>
@@ -293,8 +287,6 @@ namespace Shine
                 if (view != null)
                 {
                     view.ZoomLevel = _diffZoomLevel * _view.ZoomLevel;
-                    // あるいは単純に view.ZoomLevel = _diffZoomLevel; として
-                    // エディタズームに依存しない絶対倍率にもできる
                 }
             }
         }
