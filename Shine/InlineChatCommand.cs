@@ -24,10 +24,7 @@ namespace Shine
             _package = package;
             var cmdId = new CommandID(commandSet, commandId);
             var cmd = new OleMenuCommand(ExecuteAsync, cmdId);
-            cmd.BeforeQueryStatus += (s, e) =>
-            {
-                (s as OleMenuCommand)!.Enabled = !ShineFeatureGate.IsSuggestionRunning;
-            };
+
             mcs.AddCommand(cmd);
         }
 
@@ -43,12 +40,6 @@ namespace Shine
         private async void ExecuteAsync(object sender, EventArgs e)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-            if (ShineFeatureGate.IsSuggestionRunning)
-            {
-                System.Media.SystemSounds.Beep.Play();
-                return;
-            }
 
             // ① アクティブな IWpfTextView を取得
             var compModel = (IComponentModel)Package.GetGlobalService(typeof(SComponentModel));

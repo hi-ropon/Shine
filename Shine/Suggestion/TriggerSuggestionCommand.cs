@@ -25,15 +25,6 @@ namespace Shine.Suggestion
             var cmdId = new CommandID(commandSet, commandId);
             var cmd = new OleMenuCommand(ExecuteAsync, cmdId);
 
-            // チャット稼働中・サジェスチョン稼働中は無効化
-            cmd.BeforeQueryStatus += (s, e) =>
-            {
-                var c = (OleMenuCommand)s;
-                c.Visible = true;
-                c.Enabled = !ShineFeatureGate.IsInlineChatActive &&
-                            !ShineFeatureGate.IsSuggestionRunning;
-            };
-
             mcs.AddCommand(cmd);
         }
 
@@ -50,38 +41,25 @@ namespace Shine.Suggestion
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            if (!ShineFeatureGate.TryBeginSuggestion())
+            // ① アクティブな VS テキストビューを取得
+            var textMgr = Package.GetGlobalService(typeof(SVsTextManager)) as IVsTextManager;
+            if (textMgr == null) return;
+
+            textMgr.GetActiveView(1, null, out IVsTextView vsTextView);
+            if (vsTextView == null) return;
+
+            // ② WPF テキストビューへ変換
+            var compModel = (IComponentModel)Package.GetGlobalService(typeof(SComponentModel));
+            var adapterSvc = compModel.GetService<IVsEditorAdaptersFactoryService>();
+            var wpfView = adapterSvc.GetWpfTextView(vsTextView);
+            if (wpfView == null) return;
+
+            // ③ プロパティからマネージャーを取得しサジェスチョン実行
+            if (wpfView.Properties.TryGetProperty<InlineSuggestionManager>(
+                    "Shine.InlineSuggestionManager", out var manager))
             {
-                System.Media.SystemSounds.Beep.Play();
-                return;
-            }
-
-            try
-            {
-                // ① アクティブな VS テキストビューを取得
-                var textMgr = Package.GetGlobalService(typeof(SVsTextManager)) as IVsTextManager;
-                if (textMgr == null) return;
-
-                textMgr.GetActiveView(1, null, out IVsTextView vsTextView);
-                if (vsTextView == null) return;
-
-                // ② WPF テキストビューへ変換
-                var compModel = (IComponentModel)Package.GetGlobalService(typeof(SComponentModel));
-                var adapterSvc = compModel.GetService<IVsEditorAdaptersFactoryService>();
-                var wpfView = adapterSvc.GetWpfTextView(vsTextView);
-                if (wpfView == null) return;
-
-                // ③ プロパティからマネージャーを取得しサジェスチョン実行
-                if (wpfView.Properties.TryGetProperty<InlineSuggestionManager>(
-                        "Shine.InlineSuggestionManager", out var manager))
-                {
-                    if (!manager.IsBusy)
-                        await manager.OnEnterAsync();
-                }
-            }
-            finally
-            {
-                ShineFeatureGate.EndSuggestion();
+                if (!manager.IsBusy)
+                    await manager.OnEnterAsync();
             }
         }
     }

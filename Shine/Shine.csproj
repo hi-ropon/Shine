@@ -97,7 +97,6 @@
     <Compile Include="ClientServices\AzureOpenAI\AzureOpenAiClientService.cs" />
     <Compile Include="ClientServices\IChatClientService.cs" />
     <Compile Include="ClientServices\OpenAI\OpenAiClientService.cs" />
-    <Compile Include="ShineFeatureGate.cs" />
     <Compile Include="ShinePackage.cs" />
     <Compile Include="ShowAiChatCommand.cs" />
     <Compile Include="Suggestion\CodeSuggestionListener.cs" />

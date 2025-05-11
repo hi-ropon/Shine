@@ -54,11 +54,6 @@ namespace Shine
         private void ShowInput()
         {
             Clear();
-            if (!ShineFeatureGate.TryBeginInlineChat())
-            {
-                System.Media.SystemSounds.Beep.Play();
-                return;
-            }
 
             var input = CreateTextBox();
             var sendButton = CreateButton("▶ 送信");
@@ -151,8 +146,6 @@ namespace Shine
                 _viewAdapter.RemoveCommandFilter(_keyFilter);
                 _keyFilter = null;
             }
-            _view.ZoomLevelChanged -= OnViewZoomLevelChanged;
-            ShineFeatureGate.EndInlineChat();
         }
 
         private async Task SendAsync(TextBox input, Button sendBtn, Button cancelBtn)
