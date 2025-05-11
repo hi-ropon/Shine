@@ -13,5 +13,10 @@ namespace Shine.Suggestion
         [Name("ShineThinkingAdornment")]
         [Order(After = PredefinedAdornmentLayers.Text)]
         internal static AdornmentLayerDefinition _shineThinkingAdornmentLayer = null!;
+
+        [Export(typeof(AdornmentLayerDefinition))]
+        [Name("ShineInlineChat")]
+        [Order(After = PredefinedAdornmentLayers.Text)]
+        internal static AdornmentLayerDefinition _inlineChatLayer = null!;
     }
 }

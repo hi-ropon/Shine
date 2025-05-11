@@ -5,7 +5,7 @@
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
   </PropertyGroup>
   <PropertyGroup>
-    <LangVersion>9.0</LangVersion>
+    <LangVersion>10.0</LangVersion>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -80,12 +80,17 @@
     <Compile Include="Chat\ChatHistory.cs" />
     <Compile Include="Helpers\CodeFile.cs" />
     <Compile Include="Helpers\FileContentProvider.cs" />
+    <Compile Include="Helpers\IMessageService.cs" />
     <Compile Include="Helpers\LogHelper.cs" />
+    <Compile Include="Helpers\MessageService.cs" />
     <Compile Include="Helpers\Theme\IThemeProvider.cs" />
     <Compile Include="Helpers\Mention.cs" />
     <Compile Include="Helpers\Settings.cs" />
     <Compile Include="Helpers\Theme\Theme.cs" />
     <Compile Include="ClientServices\IChatModelProcessor.cs" />
+    <Compile Include="InlineChatCommand.cs" />
+    <Compile Include="InlineChatKeyFilter.cs" />
+    <Compile Include="InlineChatSession.cs" />
     <Compile Include="ModelNameEditor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Helpers\ResourceHelper.cs" />
@@ -136,6 +141,9 @@
     <PackageReference Include="Microsoft.VisualStudio.Language" Version="17.13.226" />
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.13.40008" ExcludeAssets="runtime" NoWarn="NU1604">
       <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Text.Logic">
+      <Version>17.13.226</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Text.UI">
       <Version>17.13.226</Version>

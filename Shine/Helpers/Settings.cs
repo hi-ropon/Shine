@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.VisualStudio.Shell;
+using Shine.Helpers;
 
 namespace Shine
 {
@@ -34,7 +35,7 @@ namespace Shine
             if (package == null)
             {
                 Application.Current.Dispatcher.Invoke(() => MessageBox.Show("Package がロードされていません。"));
-                System.Diagnostics.Debug.WriteLine("Error: AiAssistantPackage.Instance is null in InitializeSettings.");
+                LogHelper.DebugLog("Error: AiAssistantPackage.Instance is null in InitializeSettings.");
                 return;
             }
 
@@ -46,7 +47,7 @@ namespace Shine
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error getting DialogPage: {ex}");
+                ShinePackage.MessageService.ShowError(ex, $"Error getting DialogPage");
                 Application.Current.Dispatcher.Invoke(() => MessageBox.Show($"オプションページの取得に失敗しました: {ex.Message}"));
                 return;
             }
@@ -57,7 +58,7 @@ namespace Shine
                 {
                     if (string.IsNullOrWhiteSpace(options.OpenAIApiKey) || string.IsNullOrWhiteSpace(options.OpenAIModelName))
                     {
-                        System.Diagnostics.Debug.WriteLine("Warning: OpenAI API Key or Model Name is empty.");
+                        LogHelper.DebugLog("Warning: OpenAI API Key or Model Name is empty.");
                     }
                     ChatClientService = new OpenAiClientService(
                         options.OpenAIApiKey,
@@ -69,7 +70,7 @@ namespace Shine
                     if (string.IsNullOrWhiteSpace(options.AzureOpenAIEndpoint) || !Uri.IsWellFormedUriString(options.AzureOpenAIEndpoint, UriKind.Absolute) ||
                         string.IsNullOrWhiteSpace(options.AzureOpenAIApiKey) || string.IsNullOrWhiteSpace(options.AzureDeploymentName))
                     {
-                        System.Diagnostics.Debug.WriteLine("Warning: Azure OpenAI Endpoint, API Key or Deployment Name is invalid or empty.");
+                        LogHelper.DebugLog("Warning: Azure OpenAI Endpoint, API Key or Deployment Name is invalid or empty.");
                     }
                     ChatClientService = new AzureOpenAiClientService(
                         options.AzureOpenAIEndpoint,
@@ -82,11 +83,11 @@ namespace Shine
                     Application.Current.Dispatcher.Invoke(() => MessageBox.Show("未サポートのプロバイダーが選択されています。"));
                     ChatClientService = null;
                 }
-                System.Diagnostics.Debug.WriteLine($"ChatClientService initialized for provider: {options.Provider}");
+                LogHelper.DebugLog($"ChatClientService initialized for provider: {options.Provider}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error initializing ChatClientService: {ex}");
+                ShinePackage.MessageService.ShowError(ex, $"Error initializing ChatClientService");
                 Application.Current.Dispatcher.Invoke(() => MessageBox.Show($"AI クライアントの初期化に失敗しました: {ex.Message}"));
                 ChatClientService = null;
             }
@@ -100,7 +101,7 @@ namespace Shine
             var package = ShinePackage.Instance;
             if (package == null)
             {
-                System.Diagnostics.Debug.WriteLine("Error: AiAssistantPackage.Instance is null in UpdateModelComboBox.");
+                LogHelper.DebugLog("Error: AiAssistantPackage.Instance is null in UpdateModelComboBox.");
                 return;
             }
 
@@ -112,7 +113,7 @@ namespace Shine
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error getting DialogPage in UpdateModelComboBox: {ex}");
+                ShinePackage.MessageService.ShowError(ex, $"Error getting DialogPage in UpdateModelComboBox");
                 return;
             }
 
@@ -176,7 +177,7 @@ namespace Shine
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error getting DialogPage in SelectionChanged: {ex}");
+                ShinePackage.MessageService.ShowError(ex, $"Error getting DialogPage in SelectionChanged");
                 return;
             }
 
@@ -191,7 +192,7 @@ namespace Shine
                 options.AzureDeploymentName = selectedModelName;
             }
 
-            System.Diagnostics.Debug.WriteLine($"Model selection changed to: {selectedModelName} for provider {options.Provider}");
+            LogHelper.DebugLog($"Model selection changed to: {selectedModelName} for provider {options.Provider}");
         }
     }
 }

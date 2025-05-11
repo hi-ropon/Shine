@@ -45,7 +45,7 @@ namespace Shine
                 string error = process.StandardError.ReadToEnd();
                 if (!string.IsNullOrEmpty(error))
                 {
-                    Debug.WriteLine("Git diff error: " + error);
+                    ShinePackage.MessageService.OKOnly("Git diff error: " + error);
                 }
                 return output;
             }

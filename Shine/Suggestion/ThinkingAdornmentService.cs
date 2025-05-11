@@ -11,6 +11,7 @@ using System.Windows.Media;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Language.StandardClassification;
+using Shine.Helpers;
 
 namespace Shine.Suggestion
 {
@@ -133,7 +134,7 @@ namespace Shine.Suggestion
                     AdornmentPositioningBehavior.TextRelative,
                     span, null, _marker, null);
 
-                Debug.WriteLine($"Thinking marker added at {left},{geom.Bounds.Top}");
+                LogHelper.DebugLog($"Thinking marker added at {left},{geom.Bounds.Top}");
             }
 
             /// <summary>

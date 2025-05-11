@@ -7,6 +7,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.VisualStudio.Shell;
+using Shine.Helpers;
 
 namespace Shine
 {
@@ -127,22 +128,22 @@ namespace Shine
 
                         if (shouldScanSolution)
                         {
-                            System.Diagnostics.Debug.WriteLine("Scanning solution for files...");
+                            LogHelper.DebugLog("Scanning solution for files...");
                             _codeFileList = CodeFile.GetCodeFilesInSolution();
                             // 走査結果をアルファベット順にソートしてキャッシュ
                             _codeFileList.Sort(StringComparer.OrdinalIgnoreCase);
-                            System.Diagnostics.Debug.WriteLine($"Found {_codeFileList.Count} files.");
+                            LogHelper.DebugLog($"Found {_codeFileList.Count} files.");
                         }
 
                         FilterAndShowMentionList(query);
                     }
-                    catch (OperationCanceledException)
+                    catch (OperationCanceledException opeCancelEx)
                     {
-                        System.Diagnostics.Debug.WriteLine("Mention update cancelled.");
+                        ShinePackage.MessageService.ShowError(opeCancelEx, "Mention update cancelled.");
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Error updating mention list: {ex}");
+                        ShinePackage.MessageService.ShowError(ex, $"Error updating mention list");
                         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                         _mentionPopup.IsOpen = false;
                         _isMentionMode = false;

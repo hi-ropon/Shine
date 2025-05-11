@@ -95,6 +95,11 @@ $"- If the caret is inside an if/for/while/foreach/switch header, return the ful
 $"- Always return syntactically complete code.\n\n" +
 $"#Context\n{ctx}");
             }
+            catch (Exception ex)
+            {
+                ShinePackage.MessageService.ShowError(ex);
+                return;
+            }
             finally
             {
                 // --- ② サジェスト完了後にステータスバーをクリア ---
@@ -102,9 +107,8 @@ $"#Context\n{ctx}");
             }
 
             string suggestion = PostProcess(reply, ctx);
-#if DEBUG
             LogHelper.DebugLog(suggestion);
-#endif
+      
             if (string.IsNullOrWhiteSpace(suggestion)) return;
 
             await Suggestions.ShowAsync(_view, this, suggestion, caret);

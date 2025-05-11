@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
+using Shine.Helpers;
 
 namespace Shine
 {
@@ -87,26 +88,26 @@ namespace Shine
 
             if (dte?.Solution == null)
             {
-                System.Diagnostics.Debug.WriteLine("DTE または ソリューションが null です。コードファイルを取得できません。");
+                ShinePackage.MessageService.OKOnly("DTE または ソリューションが null です。コードファイルを取得できません。");
                 return new List<string>();
             }
 
             // ソリューション内の全プロジェクト（ネストしたプロジェクトも含む）を走査する
             foreach (var proj in GetAllProjects(dte))
             {
-                System.Diagnostics.Debug.WriteLine($"プロジェクト '{proj?.Name}' の処理中");
+                LogHelper.DebugLog($"プロジェクト '{proj?.Name}' の処理中");
                 try
                 {
                     codeFiles.UnionWith(GetCodeFilesFromProject(proj));
-                    System.Diagnostics.Debug.WriteLine($"現在のファイル数： '{codeFiles.Count}'");
+                    LogHelper.DebugLog($"現在のファイル数： '{codeFiles.Count}'");
                 }
                 catch (COMException comEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"プロジェクト '{proj?.Name}' の処理中に COM エラーが発生しました: {comEx.Message}");
+                    ShinePackage.MessageService.ShowError(comEx,$"プロジェクト '{proj?.Name}' の処理中に COM エラーが発生しました");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"プロジェクト '{proj?.Name}' の処理中にエラーが発生しました: {ex.Message}");
+                    ShinePackage.MessageService.ShowError(ex, $"プロジェクト '{proj?.Name}' の処理中にエラーが発生しました");
                 }
             }
 
@@ -134,12 +135,12 @@ namespace Shine
             }
             catch (COMException comEx)
             {
-                System.Diagnostics.Debug.WriteLine($"プロジェクト '{project.Name}' の ProjectItems 取得中に COM エラーが発生しました: {comEx.Message}");
+                ShinePackage.MessageService.ShowError(comEx, $"プロジェクト '{project.Name}' の ProjectItems 取得中に COM エラーが発生しました");
                 return result;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"プロジェクト '{project.Name}' の ProjectItems 取得中にエラーが発生しました: {ex.Message}");
+                ShinePackage.MessageService.ShowError(ex, $"プロジェクト '{project.Name}' の処理中にエラーが発生しました");
                 return result;
             }
 
@@ -154,11 +155,11 @@ namespace Shine
                 }
                 catch (COMException comEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"プロジェクト '{project.Name}' 内の ProjectItem '{item?.Name}' の処理中に COM エラーが発生しました: {comEx.Message}");
+                    ShinePackage.MessageService.ShowError(comEx, $"プロジェクト '{project.Name}' 内の ProjectItem '{item?.Name}' の処理中に COM エラーが発生しました");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"プロジェクト '{project.Name}' 内の ProjectItem '{item?.Name}' の処理中にエラーが発生しました: {ex.Message}");
+                    ShinePackage.MessageService.ShowError(ex, $"プロジェクト '{project.Name}' 内の ProjectItem '{item?.Name}' の処理中に COM エラーが発生しました");
                 }
             }
 
@@ -194,12 +195,12 @@ namespace Shine
             }
             catch (COMException comEx)
             {
-                System.Diagnostics.Debug.WriteLine($"ProjectItem プロパティ（'{itemName ?? "unknown"}'）へのアクセス中に COM エラーが発生しました: {comEx.Message}");
+                ShinePackage.MessageService.ShowError(comEx, $"ProjectItem プロパティ（'{itemName ?? "unknown"}' の処理中にエラーが発生しました");
                 return result;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"ProjectItem プロパティ（'{itemName ?? "unknown"}'）へのアクセス中にエラーが発生しました: {ex.Message}");
+                ShinePackage.MessageService.ShowError(ex, $"ProjectItem プロパティ（'{itemName ?? "unknown"}' の処理中にエラーが発生しました");
                 return result;
             }
 
@@ -213,11 +214,11 @@ namespace Shine
                     }
                     catch (COMException comEx)
                     {
-                        System.Diagnostics.Debug.WriteLine($"サブ ProjectItem '{subItem?.Name}' の処理中に COM エラーが発生しました: {comEx.Message}");
+                        ShinePackage.MessageService.ShowError(comEx, $"サブ ProjectItem '{subItem?.Name}' の処理中にエラーが発生しました");
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"サブ ProjectItem '{subItem?.Name}' の処理中にエラーが発生しました: {ex.Message}");
+                        ShinePackage.MessageService.ShowError(ex, $"サブ ProjectItem '{subItem?.Name}' の処理中にエラーが発生しました");
                     }
                 }
             }
