@@ -4,10 +4,19 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Media;
+using Markdig.Syntax.Inlines;
 using Microsoft.VisualStudio.Shell;
 using Shine.Helpers;
+using Shine.Models;
+using static System.Net.Mime.MediaTypeNames;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrayNotify;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using ListBox = System.Windows.Controls.ListBox;
+using RichTextBox = System.Windows.Controls.RichTextBox;
+using Timer = System.Threading.Timer;
 
 namespace Shine
 {
@@ -49,14 +58,14 @@ namespace Shine
         {
             if (_mentionPopup.IsOpen && _mentionListBox.HasItems && e.Key == Key.Enter)
             {
-                if (_mentionListBox.SelectedItem != null)
+                if (_mentionListBox.SelectedItem is FileItem item)
                 {
                     _mentionDebounceTimer?.Dispose();
                     _mentionCts?.Cancel();
                     _mentionCts?.Dispose();
                     _mentionCts = null;
 
-                    InsertMention(_mentionListBox.SelectedItem.ToString());
+                    InsertMention(item.Name);
                     e.Handled = true;
                 }
                 else
@@ -192,6 +201,15 @@ namespace Shine
             {
                 _mentionPopup.IsOpen = false;
             }
+
+            var filtered = string.IsNullOrWhiteSpace(query)
+            ? _codeFileList
+            : _codeFileList.FindAll(f => f.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0);
+
+            var items = new List<FileItem>();
+            foreach (var path in filtered) items.Add(new FileItem(path));
+
+            _mentionListBox.ItemsSource = items;
         }
 
         /// <summary>
@@ -215,14 +233,14 @@ namespace Shine
         {
             if (e.Key == Key.Enter)
             {
-                if (_mentionListBox.SelectedItem != null)
+                if (_mentionListBox.SelectedItem is FileItem item)
                 {
                     _mentionDebounceTimer?.Dispose();
                     _mentionCts?.Cancel();
                     _mentionCts?.Dispose();
                     _mentionCts = null;
 
-                    InsertMention(_mentionListBox.SelectedItem.ToString());
+                    InsertMention(item.Name);
                     e.Handled = true;
                 }
 
@@ -249,14 +267,14 @@ namespace Shine
         /// <param name="e">マウスボタンイベントの引数</param>
         public void OnMentionListMouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            if (_mentionListBox.SelectedItem != null)
+            if (_mentionListBox.SelectedItem is FileItem item)
             {
                 _mentionDebounceTimer?.Dispose();
                 _mentionCts?.Cancel();
                 _mentionCts?.Dispose();
                 _mentionCts = null;
 
-                InsertMention(_mentionListBox.SelectedItem.ToString());
+                InsertMention(item.Name);
             }
         }
 
@@ -290,11 +308,22 @@ namespace Shine
                         Background = Brushes.LightBlue,
                         CornerRadius = new CornerRadius(3),
                         Padding = new Thickness(2),
-                        Child = new TextBlock { Text = "@" + fileName, Foreground = Brushes.DarkBlue }
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Child = new TextBlock
+                        {
+                            Text = "@" + fileName,
+                            Foreground = Brushes.DarkBlue,
+                            VerticalAlignment = VerticalAlignment.Center
+                        }
                     };
 
                     // インラインUI要素として挿入
-                    var inlineUI = new InlineUIContainer(mentionElement, mentionStart);
+                    var inlineUI = new InlineUIContainer(mentionElement, mentionStart)
+                    {
+                        BaselineAlignment = BaselineAlignment.Center
+                        // （必要であれば TextBottom や TextBaseline に変えてみてください）
+                    };
+
                     // 挿入後、キャレットを移動
                     _inputRichTextBox.CaretPosition = inlineUI.ElementEnd;
                     _inputRichTextBox.CaretPosition.InsertTextInRun(" ");
