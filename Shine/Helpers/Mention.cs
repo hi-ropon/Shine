@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.VisualStudio.Shell;
 using Shine.Helpers;
+using Shine.Models;
 
 namespace Shine
 {
@@ -49,14 +50,14 @@ namespace Shine
         {
             if (_mentionPopup.IsOpen && _mentionListBox.HasItems && e.Key == Key.Enter)
             {
-                if (_mentionListBox.SelectedItem != null)
+                if (_mentionListBox.SelectedItem is FileItem item)
                 {
                     _mentionDebounceTimer?.Dispose();
                     _mentionCts?.Cancel();
                     _mentionCts?.Dispose();
                     _mentionCts = null;
 
-                    InsertMention(_mentionListBox.SelectedItem.ToString());
+                    InsertMention(item.Name);
                     e.Handled = true;
                 }
                 else
@@ -192,6 +193,15 @@ namespace Shine
             {
                 _mentionPopup.IsOpen = false;
             }
+
+            var filtered = string.IsNullOrWhiteSpace(query)
+            ? _codeFileList
+            : _codeFileList.FindAll(f => f.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0);
+
+            var items = new List<FileItem>();
+            foreach (var path in filtered) items.Add(new FileItem(path));
+
+            _mentionListBox.ItemsSource = items;
         }
 
         /// <summary>
@@ -215,14 +225,14 @@ namespace Shine
         {
             if (e.Key == Key.Enter)
             {
-                if (_mentionListBox.SelectedItem != null)
+                if (_mentionListBox.SelectedItem is FileItem item)
                 {
                     _mentionDebounceTimer?.Dispose();
                     _mentionCts?.Cancel();
                     _mentionCts?.Dispose();
                     _mentionCts = null;
 
-                    InsertMention(_mentionListBox.SelectedItem.ToString());
+                    InsertMention(item.Name);
                     e.Handled = true;
                 }
 
@@ -249,14 +259,14 @@ namespace Shine
         /// <param name="e">マウスボタンイベントの引数</param>
         public void OnMentionListMouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            if (_mentionListBox.SelectedItem != null)
+            if (_mentionListBox.SelectedItem is FileItem item)
             {
                 _mentionDebounceTimer?.Dispose();
                 _mentionCts?.Cancel();
                 _mentionCts?.Dispose();
                 _mentionCts = null;
 
-                InsertMention(_mentionListBox.SelectedItem.ToString());
+                InsertMention(item.Name);
             }
         }
 

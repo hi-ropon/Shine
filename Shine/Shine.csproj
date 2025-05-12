@@ -80,6 +80,7 @@
     <Compile Include="Chat\ChatHistory.cs" />
     <Compile Include="Helpers\CodeFile.cs" />
     <Compile Include="Helpers\FileContentProvider.cs" />
+    <Compile Include="Helpers\IconHelper.cs" />
     <Compile Include="Helpers\IMessageService.cs" />
     <Compile Include="Helpers\LogHelper.cs" />
     <Compile Include="Helpers\MessageService.cs" />
@@ -92,6 +93,7 @@
     <Compile Include="InlineChat\InlineChatKeyFilter.cs" />
     <Compile Include="InlineChat\InlineChatSession.cs" />
     <Compile Include="ModelNameEditor.cs" />
+    <Compile Include="Models\FileItem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Helpers\ResourceHelper.cs" />
     <Compile Include="ClientServices\AzureOpenAI\AzureOpenAiClientService.cs" />
